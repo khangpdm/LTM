@@ -1,6 +1,7 @@
 package geoinfo.service;
 
 import geoinfo.utils.ApiConnector;
+import geoinfo.service.NewsService;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 import java.io.IOException;
@@ -12,7 +13,7 @@ public class CityService {
         //Co the thay doi
         String key = "a7a0ef458a3642009a580805262003";
 
-        String url = "http://api.weatherapi.com/v1/current.json?key=" + key + "&q=" + input.trim() + "&aqi=no" ;
+        String url = "https://api.weatherapi.com/v1/current.json?key=" + key + "&q=" + input.trim() + "&aqi=no" ;
         try {
             Document doc = ApiConnector.get(url);
             JSONObject json = new JSONObject(doc.text());
@@ -31,7 +32,10 @@ public class CityService {
             int humidity = current.getInt("humidity");
             double windKph = current.getDouble("wind_kph");
 
-            return "Thành phố: " + name + "\n"
+            String news = NewsService.getNewsInfo(name);
+
+            return  "===============================================\n"
+                    + "Thành phố: " + name + "\n"
                     + "Vùng: " + region + "\n"
                     + "Quốc gia: " + country + "\n"
                     + "Tọa độ: " + lat + ", " + lon + "\n"
@@ -39,7 +43,10 @@ public class CityService {
                     + "Nhiệt độ hiện tại: " + tempC + "°C\n"
                     + "Thời tiết: " + condition + "\n"
                     + "Độ ẩm: " + humidity + "%\n"
-                    + "Gió: " + windKph + " km/h\n";
+                    + "Gió: " + windKph + " km/h\n"
+                    + "===============================================\n"
+                    + "TIN TỨC" + "\n"
+                    + news;
         } catch (IOException e){
             return "Lỗi khi lấy dữ liệu thành phố: " + e.getMessage();
         }
