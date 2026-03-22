@@ -1,0 +1,60 @@
+src/main/java/com/example/
+│
+├── server/
+│   ├── Server.java              // Khởi tạo server, lắng nghe socket
+│   ├── ClientHandler.java       // Xử lý kết nối từng client
+│   └── DataProcessor.java       // Xử lý dữ liệu (gọi API, parse JSON)
+│
+├── service/
+│   ├── CountryService.java      // Lấy thông tin quốc gia (RESTCountries API)
+│   ├── CityService.java         // Lấy thông tin thành phố (GeoNames, OpenWeatherMap)
+│   ├── HotelService.java        // Lấy thông tin khách sạn (Booking, Agoda, Google Places)
+│   └── NewsService.java         // Lấy tin tức/bài báo liên quan (NewsAPI, Wikipedia)
+│
+├── utils/
+│   ├── ApiConnector.java        // Hàm gọi HTTP GET/POST
+│   ├── JsonUtils.java           // Parse JSON
+│   └── Config.java              // Lưu API key, cấu hình
+│
+└── client/
+    ├── Client.java              // Kết nối tới server
+    └── ClientGUI.java           // Giao diện người dùng (Swing/JavaFX)
+
+
+GeoInfoApp/
+│
+├── pom.xml                        // File cấu hình Maven: khai báo dependencies, plugins
+│
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── geoinfo/
+│   │   │           ├── client/
+│   │   │           │   ├── Client.java
+│   │   │           │   ├── ClientGUI.java
+│   │   │           │   ├── Request.java
+│   │   │           │   └── Response.java
+│   │   │           │
+│   │   │           ├── server/
+│   │   │           │   ├── Server.java
+│   │   │           │   ├── ServerHandler.java
+│   │   │           │   ├── CityService.java
+│   │   │           │   ├── CountryService.java
+│   │   │           │   ├── HotelService.java
+│   │   │           │   └── NewsService.java
+│   │   │           │
+│   │   │           └── utils/
+│   │   │               ├── ApiConnector.java
+│   │   │               ├── JsonParser.java
+│   │   │               └── Config.java
+│   │   │
+│   │   └── resources/
+│   │       ├── application.properties   // Lưu API key, cấu hình
+│   │       └── sample.json              // Dữ liệu mẫu để test
+│   │
+│   └── test/
+│       └── java/
+│           └── com/
+│               └── geoinfo/
+│                   └── ...              // Unit test cho từng module
