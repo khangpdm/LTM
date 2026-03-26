@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7adb4e4b-0d1a-45d6-a0a2-6f9026a43322" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/client/Client.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/client/Client.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/server/ClientHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/server/ClientHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/server/DataProcessor.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/server/DataProcessor.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/server/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/server/Server.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/service/CityService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/service/CityService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/service/CountryService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/service/CountryService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/geoinfo/utils/ApiConnector.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/geoinfo/utils/ApiConnector.class" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3BSi9zBXn04xIgKNYnyzm27IkY4" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="false" />
+    <option name="showLibraryContents" value="true" />
+    <option name="showScratchesAndConsoles" value="false" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.Client.executor": "Run",
+    "Application.Server.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "mujin",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/Completed Project/Java Project/LTM",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors.ColorSchemeFont",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="Application.Client">
+    <configuration name="Client" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="geoinfo.client.Client" />
+      <module name="demo" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="geoinfo.client.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Server" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="geoinfo.server.Server" />
+      <module name="demo" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="geoinfo.server.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="LTM" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Client" />
+        <item itemvalue="Application.Server" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7adb4e4b-0d1a-45d6-a0a2-6f9026a43322" name="Changes" comment="" />
+      <created>1774488725126</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1774488725126</updated>
+      <workItem from="1774488726695" duration="2488000" />
+      <workItem from="1774492496351" duration="788000" />
+      <workItem from="1774496737564" duration="74000" />
+      <workItem from="1774496837390" duration="243000" />
+      <workItem from="1774497097382" duration="91000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
