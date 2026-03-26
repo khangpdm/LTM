@@ -58,3 +58,39 @@ GeoInfoApp/
 │           └── com/
 │               └── geoinfo/
 │                   └── ...              // Unit test cho từng module
+
+
+// Thai note ne ===============================================
+java.geoinfo
+│
+├── client
+│   ├── Client.java
+│   ├── gui
+│   │   ├── ClientApp.java
+│   │   └── MainController.java
+│   │
+│   ├── network
+│   │   ├── TcpClientService.java      <-- hiện tại dùng
+│   │   └── UdpClientService.java      <-- future
+│   │
+│   └── utils
+│
+├── server
+│   ├── Server.java
+│   ├── core
+│   │   ├── TcpServer.java
+│   │   └── UdpServer.java             <-- future
+│   │
+│   ├── handler
+│   │   └── ClientHandler.java
+│   │
+│   ├── processor
+│   │   └── RequestProcessor.java
+│   │
+│   ├── service
+│   │   ├── CityService.java
+│   │   ├── CountryService.java
+│   │   └── NewsService.java
+│   │
+│   └── utils
+│       └── ApiConnector.java
