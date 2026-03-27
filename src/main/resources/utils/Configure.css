@@ -1,0 +1,18 @@
+.m-button {
+    -fx-background-color: #2c3e50;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+}
+.m-button-title {
+    -fx-background-color: black;   /* nền đen */
+    -fx-text-fill: white;          /* chữ trắng */
+    -fx-font-family: "Arial Narrow";      /* font Arial */
+    -fx-font-size: 22px;           /* có thể tăng cho nổi bật */
+    -fx-font-weight: 500;
+}
+
+.m-button:hover {
+    -fx-background-color: #34495e;
+}
