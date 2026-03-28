@@ -15,7 +15,7 @@ public class Server {
     public void start() {
         try(ServerSocket server = new ServerSocket(port)){
             System.out.println("Server đang lắng nghe tại port " + port);
-            while(true) {
+            while (true) {
                 Socket socket = server.accept();
                 ClientHandler.handleClient(socket);
             }

@@ -12,10 +12,8 @@ import java.net.Socket;
 public class ClientHandler {
     public static void handleClient(Socket socket) {
         System.out.println("Server đã nhận kết nối từ Client: " + socket.getRemoteSocketAddress());
-        try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-        ) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);) {
             String dataFromClient;
             while((dataFromClient = reader.readLine()) != null) {
                 if (dataFromClient.trim().equalsIgnoreCase("bye")) {
