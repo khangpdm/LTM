@@ -1,102 +1,67 @@
 package geoinfo.client.network;
 
-import java.io.*;
-import java.net.Socket;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class ClientService {
-    private String host;
-    private int port;
-    private Socket socket;
-    private BufferedReader reader;
-    private PrintWriter writer;
+    private final String host;
+    private final int port;
+    private final int bufferSize;
 
-    public ClientService(String host, int port) {
+    public ClientService(String host, int port, int bufferSize) {
         this.host = host;
         this.port = port;
+        this.bufferSize = bufferSize;
     }
 
-    public boolean connect() {
-        try {
-            socket = new Socket(host, port);
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-            return true;
-        } catch (IOException e) {
-            System.out.println("Connection error: " + e.getMessage());
-            return false;
-        }
-    }
+    public void start() {
+        try (DatagramSocket socket = new DatagramSocket();
+             Scanner scanner = new Scanner(System.in)) {
+            socket.setSoTimeout(30000);
+            InetAddress address = InetAddress.getByName(host);
 
-    public String sendRequest(String message) {
-        if (socket == null || socket.isClosed()) {
-            return "Chưa kết nối đến server!";
-        }
+            while (true) {
+                String input = getInput(scanner);
+                sendData(socket, address, input);
 
-        try {
-            writer.println(message);
-            StringBuilder response = new StringBuilder();
-            String line;
+                if (input.equalsIgnoreCase("exit")) {
+                    System.out.println("Client nhận được yêu cầu kết thúc.");
+                    break;
+                }
 
-            while ((line = reader.readLine()) != null) {
-                if (line.equals("<END>")) break;
-                response.append(line).append("\n");
+                String receivedData = receiveData(socket);
+                System.out.println("Client nhận:\n" + receivedData);
             }
-            return response.toString();
-
         } catch (IOException e) {
-            return "Lỗi: " + e.getMessage();
+            System.out.println("Lỗi kết nối: " + e.getMessage());
         }
     }
 
-    public void disconnect() {
-        try {
-            if (reader != null) reader.close();
-            if (writer != null) writer.close();
-            if (socket != null && ! socket.isClosed()) socket.close();
-        } catch (IOException e) {
-            System.out.println("Lỗi đóng kết nối: " + e.getMessage());
-        }
+    private String getInput(Scanner scanner) {
+        System.out.print("Nhập dữ liệu: ");
+        return scanner.nextLine();
+    }
+
+    private void sendData(DatagramSocket socket, InetAddress address, String input) throws IOException {
+        byte[] dataBytes = input.getBytes(StandardCharsets.UTF_8);
+        DatagramPacket packet = new DatagramPacket(dataBytes, dataBytes.length, address, port);
+        socket.send(packet);
+    }
+
+    private String receiveData(DatagramSocket socket) throws IOException {
+        DatagramPacket packet = new DatagramPacket(new byte[bufferSize], bufferSize);
+        socket.receive(packet);
+        byte[] dataBytes = Arrays.copyOf(packet.getData(), packet.getLength());
+        return new String(dataBytes, StandardCharsets.UTF_8);
+    }
+
+    public static void main(String[] args) {
+        ClientService client = new ClientService("127.0.0.1", 1234, 16384);
+        client.start();
     }
 }
-
-//public class ClientService {
-//    private String host;
-//    private int port;
-//
-//    public void start(){
-//        try(Socket socket = new Socket(host,port)){
-//            System.out.println("Đã kết nối đến Server " + socket.getRemoteSocketAddress());
-//            startCommunication(socket);
-//        } catch(IOException e){
-//            System.out.println("Lỗi kết nối " + e.getMessage());
-//        }
-//    }
-//
-//
-//    private void startCommunication(Socket socket){
-//       try(Scanner scanner = new Scanner(System.in);
-//            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-//            PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()),true)){
-//           String userinput;
-//           while(true){
-//               System.out.print("Mời bạn nhập dữ liệu: ");
-//               userinput = scanner.nextLine();
-//               writer.println(userinput);
-//               String response;
-//               while((response = reader.readLine()) != null){
-//                   if(response.equals("<END>")){
-//                       break;
-//                   }
-//                   System.out.println(response);
-//               }
-//               if(userinput.equalsIgnoreCase("bye")){
-//                   System.out.println("Client gửi yêu cầu đóng kết nối.");
-//                   break;
-//               }
-//           }
-//       } catch(IOException e){
-//            System.out.println("Lỗi gửi/nhận dữ liệu " + e.getMessage());
-//       }
-//    }
-//}

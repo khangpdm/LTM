@@ -1,0 +1,8 @@
+api booking.com có giới hạn 500 request/ tháng, có thể lỗi nếu hết (đổi tài khoản) 
+link api: https://rapidapi.com/tipsters/api/booking-com/playground/apiendpoint_a159b494-e4ec-4134-8a71-5ece6d8cc60b
+Chưa hoàn thành:
+ + Test đầy đủ, giải quyết delay
+ + Chưa phân threads
+ + Chưa mã hóa
+ + Vẫn chạy ở terminal (run server.java và ClientService.java). Có thể thêm hàm main vào các file để test riêng từng chức năng.
+ + Chưa kiểm tra kỹ các điều kiện của dữ liệu đầu vào.
