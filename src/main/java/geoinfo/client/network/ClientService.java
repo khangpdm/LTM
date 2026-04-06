@@ -3,7 +3,6 @@ package geoinfo.client.network;
 import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
-import java.util.function.Consumer;
 
 public class ClientService {
     private String host;
@@ -57,37 +56,6 @@ public class ClientService {
             if (socket != null && ! socket.isClosed()) socket.close();
         } catch (IOException e) {
             System.out.println("Lỗi đóng kết nối: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Gửi query tới server và nhận response qua callback
-     * @param query Query string (ví dụ: "country:Vietnam" hoặc "city:Hanoi")
-     * @param callback Hàm xử lý response
-     */
-    public void sendQuery(String query, Consumer<String> callback) {
-        try(Socket socket = new Socket(host, port);
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
-            // Gửi query
-            writer.println(query);
-
-            // Nhận response
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.equals("<END>")) {
-                    break;
-                }
-                response.append(line).append("\n");
-            }
-
-            // Gọi callback với response
-            callback.accept(response.toString());
-
-        } catch (IOException e) {
-            callback.accept("❌ Lỗi kết nối: " + e.getMessage());
         }
     }
 }

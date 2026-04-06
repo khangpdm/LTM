@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Client (JavaFX)",
+            "request": "launch",
+            "mainClass": "geoinfo.client.Client",
+            "projectName": "LTM",
+            "vmArgs": "--module-path \"D:\\JAVA\\javafx-sdk-21.0.10\\lib\" --add-modules javafx.controls,javafx.fxml --enable-native-access=javafx.graphics"
+        },
+        {
+            "type": "java",
+            "name": "Client",
+            "request": "launch",
+            "mainClass": "geoinfo.client.Client",
+            "projectName": "LTM",
+            "vmArgs": "--module-path D:\\JAVA\\javafx-sdk-21.0.10\\lib --add-modules javafx.controls,javafx.fxml --enable-native-access=javafx.graphics"
+        },
+        {
+            "type": "java",
+            "name": "Server",
+            "request": "launch",
+            "mainClass": "geoinfo.server.Server",
+            "projectName": "LTM",
+            "vmArgs": "--module-path D:\\JAVA\\javafx-sdk-21.0.10\\lib --add-modules javafx.controls,javafx.fxml --enable-native-access=javafx.graphics",
+            "env": {
+                "RAPIDAPI_KEY": "12f0621507msh48dd45d076a47a8p1e6e1ejsn4e49b9a069a2"
+            }
+        }
+    ]
+}

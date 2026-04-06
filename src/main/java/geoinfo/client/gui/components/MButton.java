@@ -29,25 +29,17 @@ public class MButton extends Button {
     }
 
     private ImageView createIcon(String path, int width, int height) {
-<<<<<<< HEAD
-        String iconPath = (path != null && path.startsWith("/")) ? path : "/" + path;
-        InputStream is = getClass().getResourceAsStream(iconPath);
-
+        InputStream is = getClass().getResourceAsStream(path);
         if (is == null) {
+            System.out.println("Icon not found: " + path);
             return new ImageView();
         }
 
-        ImageView icon = new ImageView(new Image(is));
-        icon.setFitWidth(width);
-        icon.setFitHeight(height);
-        icon.setPreserveRatio(true);
-        return icon;
-=======
-        Image image = new Image(getClass().getResourceAsStream(path));
+        Image image = new Image(is);
         ImageView imageView = new ImageView(image);
         imageView.setFitWidth(width);
         imageView.setFitHeight(height);
+        imageView.setPreserveRatio(true);
         return imageView;
->>>>>>> cf52dc9c88c9297194db9eacfab0d095be8028df
     }
 }

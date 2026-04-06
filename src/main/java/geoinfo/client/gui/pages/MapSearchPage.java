@@ -69,7 +69,7 @@ public class MapSearchPage extends BorderPane {
         return mapGroup;
     }
 
-//    private void clickMouse(){
+    //    private void clickMouse(){
 //
 //    }
     public void enableZoomAndPan(Pane container, Group content) {

@@ -28,7 +28,6 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
-<<<<<<< HEAD
             <version>21.0.1</version>
         </dependency>
         <dependency>
@@ -40,21 +39,11 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
             <version>21.0.1</version>
-=======
-            <version>21</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
-            <artifactId>javafx-web</artifactId>
-            <version>21</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>21</version>
->>>>>>> cf52dc9c88c9297194db9eacfab0d095be8028df
+            <artifactId>javafx-base</artifactId>
+            <version>21.0.1</version>
         </dependency>
     </dependencies>
 
