@@ -17,6 +17,7 @@ public class Configure {
     // ================== FONTS ==================
     public static final Font FONT_TITLE = Font.font("Arial Narrow", FontWeight.SEMI_BOLD, 22);
     public static final Font FONT_HEADER = Font.font("Arial Narrow", FontWeight.SEMI_BOLD, 18);
+    public static final Font FONT_TITLE_SEARCH_CONTENT = Font.font("Arial Narrow", FontWeight.BOLD, 35);
     public static final Font FONT_NORMAL = Font.font("Arial Narrow", 14);
     public static final Font FONT_SMALL = Font.font("Arial Narrow", 12);
 
