@@ -14,21 +14,21 @@ public class ClientHandler {
         System.out.println("Server đã nhận kết nối từ Client: " + socket.getRemoteSocketAddress());
         try (
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)
         ) {
             String dataFromClient;
-            while((dataFromClient = reader.readLine()) != null) {
+            while ((dataFromClient = reader.readLine()) != null) {
                 if (dataFromClient.trim().equalsIgnoreCase("bye")) {
                     writer.println("Kết thúc kết nối. Tạm biệt!");
                     break;
                 }
 
-                DataProcessor.processData(dataFromClient, writer);
+                String result = DataProcessor.processData(dataFromClient);
+                writer.println(result);
                 writer.println("<END>");
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Lỗi xử lý client: " + e.getMessage());
         }
-
     }
 }
