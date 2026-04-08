@@ -35,7 +35,7 @@ public class Client extends Application {
         toolBar = new HBox();
         leftMenu = new VBox();
         content = new BorderPane();
-        searchEnginePage = new SearchEnginePage();
+        searchEnginePage = new SearchEnginePage(clientService);
         mapSearchPage = new MapSearchPage();
 
         MButton title = new MButton("Geographic Information System", "/images/logo/globe.png", 22, 22);
