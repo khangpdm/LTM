@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 
+
 public class ClientService {
     private String host;
     private int port;
@@ -41,6 +42,7 @@ public class ClientService {
         try {
             socket.setSoTimeout(10000);
             writer.println(message);
+            writer.flush();
             StringBuilder response = new StringBuilder();
             String line;
 
