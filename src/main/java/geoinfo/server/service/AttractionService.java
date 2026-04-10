@@ -57,9 +57,9 @@ public class AttractionService {
             return result.toString();
 
         } catch (IOException e) {
-            return "Lỗi khi gọi API attraction: " + e.getMessage();
+            return "Lỗi khi gọi API attraction: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         } catch (Exception e) {
-            return "Lỗi khi xử lý dữ liệu attraction: " + e.getMessage();
+            return "Lỗi khi xử lý dữ liệu attraction: " + (e.getMessage() != null ? e.getMessage() : e.toString());
         }
     }
 

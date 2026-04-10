@@ -15,6 +15,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import geoinfo.server.utils.ValidationUtils;
 
 import java.util.function.Consumer;
 
@@ -203,8 +204,9 @@ public class SearchEnginePage extends BorderPane {
             });
         });
 
-        thread.setDaemon(true);
-        thread.start();
+        //thread.setDaemon(true);
+        thread.setName("SearchThread-" + System.currentTimeMillis());
+        thread.start();;
     }
 
     private String validateKeyword(String keyword) {

@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 
 
@@ -39,6 +40,7 @@ public class ClientService {
         }
 
         try {
+            socket.setSoTimeout(10000);
             writer.println(message);
             StringBuilder response = new StringBuilder();
             String line;
@@ -50,6 +52,8 @@ public class ClientService {
                 response.append(line).append("\n");
             }
             return response.toString();
+        }catch (SocketTimeoutException e) {
+            return "Lỗi: Server không phản hồi (timeout)";
         } catch (IOException e) {
             return "Lỗi: " + e.getMessage();
         }

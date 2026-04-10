@@ -2,6 +2,7 @@ package geoinfo.server.service;
 
 
 import geoinfo.server.utils.ApiConnector;
+import geoinfo.server.utils.ValidationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
@@ -37,7 +38,7 @@ public class CityService {
             return "Lỗi khi lấy dữ liệu thành phố: tên thành phố quá dài.";
         }
 
-        if (!input.matches("[\\p{L}\\p{M}0-9 .,'()\\-]+")) {
+        if (!ValidationUtils.isValidLocationName(input)) {
             return "Lỗi khi lấy dữ liệu thành phố: tên thành phố chứa ký tự không hợp lệ.";
         }
 
@@ -50,22 +51,26 @@ public class CityService {
             Document doc = ApiConnector.get(url);
             JSONObject json = new JSONObject(doc.text());
 
-            JSONObject location = json.getJSONObject("location");
-            String name = location.getString("name");
+            JSONObject location = json.optJSONObject("location");
+            if (location == null) {
+                return "Lỗi khi lấy dữ liệu thành phố: vị trí không hợp lệ.";
+            }
+
+            String name = location.optString("name");
             if (!isReasonablySameCity(input, name)) {
                 return "Lỗi khi lấy dữ liệu thành phố: không tìm thấy thành phố phù hợp.";
             }
-            String region = location.getString("region");
-            String country = location.getString("country");
-            double lat = location.getDouble("lat");
-            double lon = location.getDouble("lon");
-            String localTime = location.getString("localtime");
+            String region = location.optString("region");
+            String country = location.optString("country");
+            double lat = location.optDouble("lat");
+            double lon = location.optDouble("lon");
+            String localTime = location.optString("localtime");
 
-            JSONObject current = json.getJSONObject("current");
-            double tempC = current.getDouble("temp_c");
-            String condition = current.getJSONObject("condition").getString("text");
-            int humidity = current.getInt("humidity");
-            double windKph = current.getDouble("wind_kph");
+            JSONObject current = json.optJSONObject("current");
+            double tempC = current.optDouble("temp_c");
+            String condition = current.optJSONObject("condition").getString("text");
+            int humidity = current.optInt("humidity");
+            double windKph = current.optDouble("wind_kph");
 
             String population = getCityPopulation(name, country, lat, lon);
             String news = NewsService.getNewsInfo(name);
@@ -154,8 +159,11 @@ public class CityService {
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
 
-            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                return "Chưa có dữ liệu";
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                connection.disconnect();
+                return "Chưa có dữ liệu (mã: " + responseCode + ")";
             }
 
             String body = new String(connection.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

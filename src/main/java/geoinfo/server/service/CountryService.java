@@ -4,6 +4,7 @@ import geoinfo.server.utils.ApiConnector;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
+import geoinfo.server.utils.ValidationUtils;
 
 import java.text.Normalizer;
 import java.util.Scanner;
@@ -33,7 +34,7 @@ public class CountryService {
                 return "Lỗi khi lấy dữ liệu quốc gia: tên quốc gia quá dài.";
             }
 
-            if (!input.matches("[\\p{L}\\p{M}0-9 .,'()\\-]+")) {
+            if (!ValidationUtils.isValidLocationName(input)) {
                 return "Lỗi khi lấy dữ liệu quốc gia: tên quốc gia chứa ký tự không hợp lệ.";
             }
 
@@ -87,7 +88,7 @@ public class CountryService {
         }
     }
 
-    private static JSONObject findCountry(String keyword) {
+    private static synchronized JSONObject findCountry(String keyword) {
         String normalizedKeyword = normalize(keyword);
         String compactKeyword = normalizeCompact(keyword);
         String accentInsensitiveKeyword = normalizeAccentInsensitive(keyword);
@@ -108,7 +109,7 @@ public class CountryService {
         JSONObject partialMatch = null;
 
         for (int i = 0; i < countriesCache.length(); i++) {
-            JSONObject country = countriesCache.optJSONObject(i);
+            JSONObject country = countriesCache.getJSONObject(i);
             if (country == null) {
                 continue;
             }
@@ -217,11 +218,13 @@ public class CountryService {
         }
 
         Document doc = ApiConnector.get(ALL_COUNTRIES_URL);
+        if (doc == null) {  // ✅ Check trước
+            throw new IllegalStateException("Không thể kết nối API quốc gia: " + ALL_COUNTRIES_URL);
+        }
         String body = doc.text();
         if (body == null || body.isBlank()) {
-            throw new IllegalStateException("Không lấy được dữ liệu danh sách quốc gia.");
+            throw new IllegalStateException("Dữ liệu quốc gia trống hoặc không hợp lệ");
         }
-
         countriesCache = new JSONArray(body);
     }
 
