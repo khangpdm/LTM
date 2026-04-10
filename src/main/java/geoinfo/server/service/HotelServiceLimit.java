@@ -23,10 +23,22 @@ public class HotelServiceLimit {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     public static String getHotelsByCity(String cityName) {
+        JSONObject response = new JSONObject()
+                .put("status", "success")
+                .put("type", "hotels")
+                .put("city", cityName == null ? "" : cityName.trim())
+                .put("items", new JSONArray());
+
+        if (cityName == null || cityName.isBlank()) {
+            return response.put("status", "error")
+                    .put("message", "City name is required.")
+                    .toString(2);
+        }
+
         try {
             JSONObject destination = searchDestination(cityName);
             if (destination == null) {
-                return "Khách sạn gợi ý: không tìm thấy điểm đến phù hợp cho " + cityName;
+                return response.put("message", "No matching destination found.").toString(2);
             }
 
             String destId = String.valueOf(destination.opt("dest_id"));
@@ -35,28 +47,34 @@ public class HotelServiceLimit {
             JSONArray hotels = extractHotels(searchResult);
 
             if (hotels == null || hotels.isEmpty()) {
-                return "Khách sạn gợi ý: không tìm thấy khách sạn cho " + cityName;
+                return response.put("message", "No hotels found.").toString(2);
             }
 
             int limit = Math.min(3, hotels.length());
-            List<CompletableFuture<String>> tasks = new ArrayList<>();
-
+            List<CompletableFuture<JSONObject>> tasks = new ArrayList<>();
             for (int i = 0; i < limit; i++) {
                 JSONObject hotel = hotels.getJSONObject(i);
-                tasks.add(CompletableFuture.supplyAsync(() -> formatHotelItem(hotel)).exceptionally(e -> ""));
+                tasks.add(CompletableFuture.supplyAsync(() -> formatHotelItem(hotel)).exceptionally(e -> null));
             }
 
-            StringBuilder result = new StringBuilder("Khách sạn gợi ý cho " + cityName + ":\n");
-            for (CompletableFuture<String> task : tasks) {
-                String text = task.join();
-                if (!text.isBlank()) {
-                    result.append(text).append("\n");
+            JSONArray items = new JSONArray();
+            for (CompletableFuture<JSONObject> task : tasks) {
+                JSONObject item = task.join();
+                if (item != null) {
+                    items.put(item);
                 }
             }
 
-            return result.toString();
+            response.put("items", items);
+            if (items.isEmpty()) {
+                response.put("message", "No valid hotel data found.");
+            }
+
+            return response.toString(2);
         } catch (Exception e) {
-            return "Khách sạn gợi ý: lỗi lấy dữ liệu - " + e.getMessage();
+            return response.put("status", "error")
+                    .put("message", "Failed to fetch hotels: " + e.getMessage())
+                    .toString(2);
         }
     }
 
@@ -66,7 +84,6 @@ public class HotelServiceLimit {
 
         JSONObject response = sendGetRequest(url);
         JSONArray data = response.optJSONArray("data");
-
         if (data == null || data.isEmpty()) {
             return null;
         }
@@ -124,7 +141,8 @@ public class HotelServiceLimit {
 
         JSONObject response = sendGetRequest(url);
         JSONObject data = response.optJSONObject("data");
-        return data == null ? null : data.optJSONArray("result");
+        JSONArray reviews = data == null ? null : data.optJSONArray("result");
+        return reviews == null ? new JSONArray() : reviews;
     }
 
     private static JSONObject sendGetRequest(String url) throws Exception {
@@ -154,23 +172,22 @@ public class HotelServiceLimit {
         return hotels != null ? hotels : data.optJSONArray("result");
     }
 
-    private static String formatHotelItem(JSONObject hotel) {
+    private static JSONObject formatHotelItem(JSONObject hotel) {
         JSONObject property = hotel.optJSONObject("property");
         if (property == null) {
-            return "";
+            return null;
         }
 
         String hotelId = String.valueOf(property.opt("id"));
-        String name = firstNonBlank(property.optString("name"), "Khách sạn không rõ tên");
+        String name = firstNonBlank(property.optString("name"), "Unknown");
         String price = extractPrice(property);
-        String reviewScore = firstNonBlank(String.valueOf(property.opt("reviewScore")), "Chưa có dữ liệu");
+        String reviewScore = firstNonBlank(String.valueOf(property.opt("reviewScore")), "Unknown");
         String reviewCount = firstNonBlank(String.valueOf(property.opt("reviewCount")), "0");
 
         CompletableFuture<JSONObject> detailFuture = CompletableFuture.supplyAsync(() -> {
             try {
                 return getHotelDetails(hotelId);
             } catch (Exception e) {
-                System.out.println("Lỗi lấy chi tiết khách sạn " + hotelId + ": " + e.getMessage());
                 return null;
             }
         });
@@ -179,42 +196,27 @@ public class HotelServiceLimit {
             try {
                 return getHotelReviews(hotelId);
             } catch (Exception e) {
-                System.out.println("Lỗi lấy đánh giá khách sạn " + hotelId + ": " + e.getMessage());
-                return null;
+                return new JSONArray();
             }
         });
 
         JSONObject detail = detailFuture.join();
         JSONArray reviews = reviewFuture.join();
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("- ").append(name).append("\n");
-        sb.append("  Địa chỉ: ").append(buildFullAddress(detail)).append("\n");
-        sb.append("  Giá phòng: ").append(price).append("\n");
-        sb.append("  Đánh giá tổng: ").append(reviewScore)
-                .append(" (").append(reviewCount).append(" đánh giá)\n");
-
-        String facilities = buildFacilities(detail);
-        if (!facilities.isBlank()) {
-            sb.append("  Tiện ích nổi bật: ").append(facilities).append("\n");
-        }
-
-        String reviewSummary = buildReviewSummary(reviews);
-        if (!reviewSummary.isBlank()) {
-            sb.append(reviewSummary);
-        }
-
-        String hotelUrl = detail == null ? "" : firstNonBlank(detail.optString("url"));
-        if (!hotelUrl.isBlank()) {
-            sb.append("  Link: ").append(hotelUrl).append("\n");
-        }
-
-        return sb.toString();
+        return new JSONObject()
+                .put("name", name)
+                .put("address", buildFullAddress(detail))
+                .put("price", price)
+                .put("reviewScore", reviewScore)
+                .put("reviewCount", reviewCount)
+                .put("facilities", buildFacilities(detail))
+                .put("url", detail == null ? "" : firstNonBlank(detail.optString("url")))
+                .put("reviews", buildReviewItems(reviews));
     }
 
     private static String buildFullAddress(JSONObject detail) {
         if (detail == null) {
-            return "Không rõ địa chỉ";
+            return "Unknown";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -223,7 +225,7 @@ public class HotelServiceLimit {
         appendPart(sb, detail.optString("city"));
         appendPart(sb, detail.optString("country_trans"));
         appendPart(sb, detail.optString("zip"));
-        return sb.isEmpty() ? "Không rõ địa chỉ" : sb.toString();
+        return sb.isEmpty() ? "Unknown" : sb.toString();
     }
 
     private static String buildFacilities(JSONObject detail) {
@@ -243,13 +245,11 @@ public class HotelServiceLimit {
 
         StringBuilder sb = new StringBuilder();
         int limit = Math.min(4, facilities.length());
-
         for (int i = 0; i < limit; i++) {
             String name = facilities.getJSONObject(i).optString("name").trim();
             if (name.isBlank()) {
                 continue;
             }
-
             if (!sb.isEmpty()) {
                 sb.append(", ");
             }
@@ -259,45 +259,36 @@ public class HotelServiceLimit {
         return sb.toString();
     }
 
-    private static String buildReviewSummary(JSONArray reviews) {
+    private static JSONArray buildReviewItems(JSONArray reviews) {
+        JSONArray items = new JSONArray();
         if (reviews == null || reviews.isEmpty()) {
-            return "";
+            return items;
         }
 
-        StringBuilder sb = new StringBuilder();
         int limit = Math.min(2, reviews.length());
-
         for (int i = 0; i < limit; i++) {
             JSONObject review = reviews.getJSONObject(i);
             JSONObject author = review.optJSONObject("author");
 
-            String authorName = author == null ? "Ẩn danh" : firstNonBlank(author.optString("name"), "Ẩn danh");
+            String authorName = author == null ? "Anonymous" : firstNonBlank(author.optString("name"), "Anonymous");
             String title = firstNonBlank(review.optString("title"));
             String pros = firstNonBlank(review.optString("pros"));
             String cons = firstNonBlank(review.optString("cons"));
 
-            sb.append("  Nhận xét ").append(i + 1).append(": ").append(authorName);
-            if (!title.isBlank()) {
-                sb.append(" - ").append(title);
-            }
-            sb.append("\n");
-
-            if (!pros.isBlank()) {
-                sb.append("    Điểm tốt: ").append(pros).append("\n");
-            }
-
-            if (!cons.isBlank()) {
-                sb.append("    Điểm chưa tốt: ").append(cons).append("\n");
-            }
+            items.put(new JSONObject()
+                    .put("author", authorName)
+                    .put("title", title)
+                    .put("pros", pros)
+                    .put("cons", cons));
         }
 
-        return sb.toString();
+        return items;
     }
 
     private static String extractPrice(JSONObject property) {
         JSONObject priceBreakdown = property.optJSONObject("priceBreakdown");
         if (priceBreakdown == null) {
-            return "Chưa có dữ liệu";
+            return "Unknown";
         }
 
         JSONObject grossPrice = priceBreakdown.optJSONObject("grossPrice");
@@ -318,7 +309,7 @@ public class HotelServiceLimit {
             }
         }
 
-        return "Chưa có dữ liệu";
+        return "Unknown";
     }
 
     private static String getArrivalDate() {
@@ -338,7 +329,6 @@ public class HotelServiceLimit {
         if (value == null || value.isBlank()) {
             return;
         }
-
         if (!sb.isEmpty()) {
             sb.append(", ");
         }
@@ -355,6 +345,6 @@ public class HotelServiceLimit {
     }
 
     public static void main(String[] args) {
-        System.out.println(getHotelsByCity("Đà Nẵng"));
+        System.out.println(getHotelsByCity("Da Nang"));
     }
 }
