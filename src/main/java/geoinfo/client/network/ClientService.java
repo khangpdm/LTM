@@ -9,24 +9,25 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 
-
 public class ClientService {
-    private String host;
-    private int port;
-    private Socket socket;
-    private BufferedReader reader;
-    private PrintWriter writer;
+    private final String host;
+    private final int port;
 
     public ClientService(String host, int port) {
         this.host = host;
         this.port = port;
     }
 
+    public String getHost() {
+        return host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
     public boolean connect() {
-        try {
-            socket = new Socket(host, port);
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+        try (Socket socket = new Socket(host, port)) {
             return true;
         } catch (IOException e) {
             System.out.println("Connection error: " + e.getMessage());
@@ -35,17 +36,17 @@ public class ClientService {
     }
 
     public String sendRequest(String message) {
-        if (socket == null || socket.isClosed()) {
-            return "Chưa kết nối đến server!";
-        }
-
-        try {
-            socket.setSoTimeout(10000);
+        try (
+                Socket socket = new Socket(host, port);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)
+        ) {
+            socket.setSoTimeout(100000);
             writer.println(message);
             writer.flush();
+
             StringBuilder response = new StringBuilder();
             String line;
-
             while ((line = reader.readLine()) != null) {
                 if (line.equals("<END>")) {
                     break;
@@ -53,26 +54,14 @@ public class ClientService {
                 response.append(line).append("\n");
             }
             return response.toString();
-        }catch (SocketTimeoutException e) {
-            return "Lỗi: Server không phản hồi (timeout)";
+        } catch (SocketTimeoutException e) {
+            return "Loi: Server khong phan hoi (timeout)";
         } catch (IOException e) {
-            return "Lỗi: " + e.getMessage();
+            return "Loi: " + e.getMessage();
         }
     }
 
     public void disconnect() {
-        try {
-            if (reader != null) {
-                reader.close();
-            }
-            if (writer != null) {
-                writer.close();
-            }
-            if (socket != null && !socket.isClosed()) {
-                socket.close();
-            }
-        } catch (IOException e) {
-            System.out.println("Lỗi đóng kết nối: " + e.getMessage());
-        }
+        // Each request uses its own socket, so there is no persistent connection to close.
     }
 }
