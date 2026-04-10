@@ -2,15 +2,15 @@ package geoinfo.server.processor;
 
 import geoinfo.server.service.CityService;
 import geoinfo.server.service.CountryService;
+import org.json.JSONObject;
 
 public class DataProcessor {
-    /*private static final String COUNTRY_NOT_FOUND_PREFIX =
-            "Lỗi khi lấy dữ liệu quốc gia: không tìm thấy quốc gia phù hợp.";*/
-    private static final String ERROR_PREFIX = "Lỗi khi lấy dữ liệu";
-
     public static String processData(String input) {
         if (input == null || input.isBlank()) {
-            return "Dữ liệu rỗng.";
+            return new JSONObject()
+                    .put("status", "error")
+                    .put("message", "Du lieu rong.")
+                    .toString(2);
         }
 
         String normalizedInput = input.trim();
@@ -23,7 +23,11 @@ public class DataProcessor {
         if (lowerInput.startsWith("country:")) {
             String country = normalizedInput.substring("country:".length()).trim();
             if (country.isEmpty()) {
-                return "Vui lòng nhập tên quốc gia.";
+                return new JSONObject()
+                        .put("status", "error")
+                        .put("type", "country")
+                        .put("message", "PLEASE ENTER COUNTRY NAME.")
+                        .toString(2);
             }
             return CountryService.getCountryInfo(country);
         }
@@ -31,22 +35,38 @@ public class DataProcessor {
         if (lowerInput.startsWith("city:")) {
             String city = normalizedInput.substring("city:".length()).trim();
             if (city.isEmpty()) {
-                return "Vui lòng nhập tên thành phố.";
+                return new JSONObject()
+                        .put("status", "error")
+                        .put("type", "city")
+                        .put("message", "PLEASE ENTER CITY NAME.")
+                        .toString(2);
             }
             return CityService.getCityInfo(city);
         }
 
         String countryResult = CountryService.getCountryInfo(normalizedInput);
-        if (!countryResult.startsWith(ERROR_PREFIX)) {
+        if (isSuccessResponse(countryResult)) {
             return countryResult;
         }
 
         String cityResult = CityService.getCityInfo(normalizedInput);
-        if (!cityResult.startsWith(ERROR_PREFIX)) {
+        if (isSuccessResponse(cityResult)) {
             return cityResult;
         }
 
-        // Cả hai đều fail
-        return "Không tìm thấy thông tin.\n" + countryResult + "\n" + cityResult;
+        return new JSONObject()
+                .put("status", "error")
+                .put("message", "Khong tim thay thong tin.")
+                .put("countryResponse", new JSONObject(countryResult))
+                .put("cityResponse", new JSONObject(cityResult))
+                .toString(2);
+    }
+
+    private static boolean isSuccessResponse(String response) {
+        try {
+            return "success".equalsIgnoreCase(new JSONObject(response).optString("status"));
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
