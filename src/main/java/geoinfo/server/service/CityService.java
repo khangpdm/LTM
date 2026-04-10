@@ -6,12 +6,15 @@ import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 
 public class CityService {
     private static final String WEATHER_API_KEY = "a7a0ef458a3642009a580805262003";
+    private static final String API_NINJAS_KEY = "DgGav2PqKdwGSy3B82AaE4cdRFtnE7qNFcYF4Yj1";
     private static final String GEONAMES_USERNAME = "tinmi2005";
 
     public static String getCityInfo(String input) {
@@ -63,18 +66,18 @@ public class CityService {
             int humidity = current.getInt("humidity");
             double windKph = current.getDouble("wind_kph");
 
-            String population = getCityPopulation(name);
+            String population = getCityPopulation(name, country, lat, lon);
             String news = NewsService.getNewsInfo(name);
             String hotels = HotelService.getHotelsByCity(name);
 
             return "===============================================\n"
                     + "THÀNH PHỐ: " + name + "\n"
                     + "Vùng: " + region + "\n"
-                    + "Quốc gia: " + country + "\n"
+                    + "Quoc gia: " + country + "\n"
                     + "Dân số: " + population + "\n"
                     + "Tọa độ: " + lat + ", " + lon + "\n"
                     + "Thời gian địa phương: " + localTime + "\n"
-                    + "Nhiệt độ hiện tại: " + tempC + "°C\n"
+                    + "Nhiệt độ hiện tại: " + tempC + " °C\n"
                     + "Thời tiết: " + condition + "\n"
                     + "Độ ẩm: " + humidity + "%\n"
                     + "Gió: " + windKph + " km/h\n"
@@ -120,18 +123,88 @@ public class CityService {
             int humidity = current.optInt("humidity", 0);
             double windKph = current.optDouble("wind_kph", 0);
 
-            return placeName + ": " + tempC + "°C, " + condition
+            return placeName + ": " + tempC + " °C, " + condition
                     + ", độ ẩm " + humidity + "%, gió " + windKph + " km/h";
         } catch (Exception e) {
             return "Chưa lấy được dữ liệu thời tiết: " + e.getMessage();
         }
     }
 
-    private static String getCityPopulation(String cityName) {
+    private static String getCityPopulation(String cityName, String countryName, double lat, double lon) {
+        String population = getCityPopulationFromApiNinjas(cityName, lat, lon);
+        if (!"Chưa có dữ liệu".equals(population)) {
+            return population;
+        }
+
+        return getCityPopulationFromGeoNames(cityName, countryName);
+    }
+
+    private static String getCityPopulationFromApiNinjas(String cityName, double targetLat, double targetLon) {
+        HttpURLConnection connection = null;
+
+        try {
+            String url = "https://api.api-ninjas.com/v1/city?name="
+                    + URLEncoder.encode(cityName, StandardCharsets.UTF_8);
+
+            connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("accept", "application/json");
+            connection.setRequestProperty("X-Api-Key", API_NINJAS_KEY);
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return "Chưa có dữ liệu";
+            }
+
+            String body = new String(connection.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            JSONArray cities = new JSONArray(body);
+            if (cities.isEmpty()) {
+                return "Chưa có dữ liệu";
+            }
+
+            JSONObject bestMatch = null;
+            double bestDistance = Double.MAX_VALUE;
+
+            for (int i = 0; i < cities.length(); i++) {
+                JSONObject city = cities.getJSONObject(i);
+                double apiLat = city.optDouble("latitude", Double.NaN);
+                double apiLon = city.optDouble("longitude", Double.NaN);
+
+                if (Double.isNaN(apiLat) || Double.isNaN(apiLon)) {
+                    continue;
+                }
+
+                double distance = Math.pow(apiLat - targetLat, 2) + Math.pow(apiLon - targetLon, 2);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestMatch = city;
+                }
+            }
+
+            if (bestMatch == null) {
+                bestMatch = cities.getJSONObject(0);
+            }
+
+            long population = bestMatch.optLong("population", 0);
+            return population > 0 ? String.valueOf(population) : "Chưa có dữ liệu";
+        } catch (Exception e) {
+            return "Chưa có dữ liệu";
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private static String getCityPopulationFromGeoNames(String cityName, String countryName) {
         try {
             String url = "http://api.geonames.org/searchJSON?q="
                     + URLEncoder.encode(cityName, StandardCharsets.UTF_8)
-                    + "&maxRows=1&username="
+                    + "&countryBias="
+                    + URLEncoder.encode(countryName, StandardCharsets.UTF_8)
+                    + "&featureClass=P"
+                    + "&maxRows=10&username="
                     + GEONAMES_USERNAME;
 
             Document doc = ApiConnector.get(url);
@@ -141,8 +214,16 @@ public class CityService {
                 return "Chưa có dữ liệu";
             }
 
-            long population = geonames.getJSONObject(0).optLong("population", 0);
-            return population > 0 ? String.valueOf(population) : "Chưa có dữ liệu";
+            long bestPopulation = 0;
+            for (int i = 0; i < geonames.length(); i++) {
+                JSONObject item = geonames.getJSONObject(i);
+                long population = item.optLong("population", 0);
+                if (population > bestPopulation) {
+                    bestPopulation = population;
+                }
+            }
+
+            return bestPopulation > 0 ? String.valueOf(bestPopulation) : "Chưa có dữ liệu";
         } catch (Exception e) {
             return "Chưa có dữ liệu";
         }
