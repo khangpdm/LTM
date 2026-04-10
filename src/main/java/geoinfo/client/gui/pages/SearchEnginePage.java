@@ -14,6 +14,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.application.Platform;
 
 public class SearchEnginePage extends BorderPane {
 
@@ -23,6 +24,7 @@ public class SearchEnginePage extends BorderPane {
     private TextArea resultArea;
     private ImageView searchIcon;
     private ClientService clientService;
+    private boolean searching;
 
     public SearchEnginePage(ClientService clientService) {
         initComponents();
@@ -119,6 +121,10 @@ public class SearchEnginePage extends BorderPane {
     }
 
     private void search() {
+        if (searching) {
+            return;
+        }
+
         String keyword = txtSearch.getText().trim();
         keyword = keyword.replaceAll("\\s+", " ").trim();
         String type = cbbType.getValue();
@@ -139,8 +145,38 @@ public class SearchEnginePage extends BorderPane {
         }
 
         String request = type.toLowerCase() + ":" + keyword;
-        String response = clientService.sendRequest(request);
-        resultArea.setText(response);
+        //String response = clientService.sendRequest(request);
+        String loadingMessage = type.equals("City")
+                ? "Dang tim kiem thanh pho..."
+                : "Dang tim kiem quoc gia...";
+
+        setSearchingState(true);
+        resultArea.setText(loadingMessage);
+
+        Thread thread = new Thread(() -> {
+            String response;
+            try {
+                response = clientService.sendRequest(request);
+            } catch (Exception ex) {
+                response = "Loi khi tim kiem: " + ex.getMessage();
+            }
+
+            final String finalResponse = response;
+            Platform.runLater(() -> {
+                resultArea.setText(finalResponse);
+                setSearchingState(false);
+            });
+        });
+
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void setSearchingState(boolean searching) {
+        this.searching = searching;
+        txtSearch.setDisable(searching);
+        cbbType.setDisable(searching);
+        searchIcon.setDisable(searching);
     }
 
     public void setResult(String result) {
