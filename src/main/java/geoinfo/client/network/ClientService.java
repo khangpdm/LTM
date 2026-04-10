@@ -42,6 +42,7 @@ public class ClientService {
         try {
             socket.setSoTimeout(10000);
             writer.println(message);
+            writer.flush();
             StringBuilder response = new StringBuilder();
             String line;
 
