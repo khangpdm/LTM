@@ -22,3 +22,12 @@
 .m-button-title:hover {
     -fx-text-fill: #00AEEF;
 }
+
+.cbb-style {
+    -fx-background-color: black;
+    -fx-border-color: #00AEEF;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 4 10;
+    -fx-font-size: 12px;
+}

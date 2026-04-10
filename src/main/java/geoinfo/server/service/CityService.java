@@ -1,6 +1,5 @@
 package geoinfo.server.service;
 
-
 import geoinfo.server.utils.ApiConnector;
 import geoinfo.server.utils.ValidationUtils;
 import org.json.JSONArray;
@@ -21,25 +20,25 @@ public class CityService {
 
     public static String getCityInfo(String input) {
         if (input == null) {
-            return "Lỗi khi lấy dữ liệu thành phố: dữ liệu đầu vào rỗng.";
+            return createErrorResponse("Loi khi lay du lieu thanh pho: du lieu dau vao rong.");
         }
 
         input = input.replaceAll("\\s+", " ").trim();
 
         if (input.isEmpty()) {
-            return "Lỗi khi lấy dữ liệu thành phố: dữ liệu đầu vào rỗng.";
+            return createErrorResponse("Loi khi lay du lieu thanh pho: du lieu dau vao rong.");
         }
 
         if (input.length() < 2) {
-            return "Lỗi khi lấy dữ liệu thành phố: tên thành phố quá ngắn.";
+            return createErrorResponse("Loi khi lay du lieu thanh pho: ten thanh pho qua ngan.");
         }
 
         if (input.length() > 100) {
-            return "Lỗi khi lấy dữ liệu thành phố: tên thành phố quá dài.";
+            return createErrorResponse("Loi khi lay du lieu thanh pho: ten thanh pho qua dai.");
         }
 
         if (!ValidationUtils.isValidLocationName(input)) {
-            return "Lỗi khi lấy dữ liệu thành phố: tên thành phố chứa ký tự không hợp lệ.";
+            return createErrorResponse("Loi khi lay du lieu thanh pho: ten thanh pho chua ky tu khong hop le.");
         }
 
         String url = "https://api.weatherapi.com/v1/current.json?key="
@@ -47,66 +46,73 @@ public class CityService {
                 + "&q="
                 + URLEncoder.encode(input.trim(), StandardCharsets.UTF_8)
                 + "&aqi=no";
+
         try {
             Document doc = ApiConnector.get(url);
             JSONObject json = new JSONObject(doc.text());
 
             JSONObject location = json.optJSONObject("location");
             if (location == null) {
-                return "Lỗi khi lấy dữ liệu thành phố: vị trí không hợp lệ.";
+                return createErrorResponse("Loi khi lay du lieu thanh pho: vi tri khong hop le.");
             }
 
             String name = location.optString("name");
             if (!isReasonablySameCity(input, name)) {
-                return "Lỗi khi lấy dữ liệu thành phố: không tìm thấy thành phố phù hợp.";
+                return createErrorResponse("Loi khi lay du lieu thanh pho: khong tim thay thanh pho phu hop.");
             }
+
             String region = location.optString("region");
             String country = location.optString("country");
-            double lat = location.optDouble("lat");
-            double lon = location.optDouble("lon");
+            double latitude = location.optDouble("lat");
+            double longitude = location.optDouble("lon");
             String localTime = location.optString("localtime");
 
             JSONObject current = json.optJSONObject("current");
-            double tempC = current.optDouble("temp_c");
-            String condition = current.optJSONObject("condition").getString("text");
+            if (current == null) {
+                return createErrorResponse("Loi khi lay du lieu thanh pho: thieu du lieu thoi tiet.");
+            }
+
+            double temperatureCelsius = current.optDouble("temp_c");
+            JSONObject conditionJson = current.optJSONObject("condition");
+            String weatherCondition = conditionJson == null ? "" : conditionJson.optString("text");
             int humidity = current.optInt("humidity");
             double windKph = current.optDouble("wind_kph");
 
-            String population = getCityPopulation(name, country, lat, lon);
-            String news = NewsService.getNewsInfo(name);
-            String hotels = HotelService.getHotelsByCity(name);
+            String population = getCityPopulation(name, country, latitude, longitude);
+            String newsJson = NewsService.getNewsInfo(name);
+            String hotelsJson = HotelService.getHotelsByCity(name);
 
-            return "===============================================\n"
-                    + "THÀNH PHỐ: " + name + "\n"
-                    + "Vùng: " + region + "\n"
-                    + "Quoc gia: " + country + "\n"
-                    + "Dân số: " + population + "\n"
-                    + "Tọa độ: " + lat + ", " + lon + "\n"
-                    + "Thời gian địa phương: " + localTime + "\n"
-                    + "Nhiệt độ hiện tại: " + tempC + " °C\n"
-                    + "Thời tiết: " + condition + "\n"
-                    + "Độ ẩm: " + humidity + "%\n"
-                    + "Gió: " + windKph + " km/h\n"
-                    + "===============================================\n"
-                    + "TIN TỨC\n"
-                    + news + "\n"
-                    + "===============================================\n"
-                    + hotels;
-
+            JSONObject response = new JSONObject();
+            response.put("status", "success");
+            response.put("type", "city");
+            response.put("name", name);
+            response.put("region", region);
+            response.put("country", country);
+            response.put("population", population);
+            response.put("latitude", latitude);
+            response.put("longitude", longitude);
+            response.put("localTime", localTime);
+            response.put("temperatureCelsius", temperatureCelsius);
+            response.put("weatherCondition", weatherCondition);
+            response.put("humidity", humidity);
+            response.put("windKph", windKph);
+            response.put("news", extractItems(newsJson));
+            response.put("hotels", extractItems(hotelsJson));
+            return response.toString(2);
         } catch (IOException e) {
-            return "Lỗi khi lấy dữ liệu thành phố: " + e.getMessage();
+            return createErrorResponse("Loi khi lay du lieu thanh pho: " + e.getMessage());
         }
     }
 
     public static String getWeatherSummary(String query) {
         if (query == null) {
-            return "Chưa có dữ liệu thời tiết.";
+            return "Chua co du lieu thoi tiet.";
         }
 
         query = query.replaceAll("\\s+", " ").trim();
 
         if (query.isEmpty()) {
-            return "Chưa có dữ liệu thời tiết.";
+            return "Chua co du lieu thoi tiet.";
         }
 
         String url = "https://api.weatherapi.com/v1/current.json?key="
@@ -124,21 +130,21 @@ public class CityService {
             String placeName = location.optString("name", query);
             double tempC = current.optDouble("temp_c", 0);
             String condition = current.optJSONObject("condition") == null
-                    ? "Chưa có dữ liệu"
-                    : current.getJSONObject("condition").optString("text", "Chưa có dữ liệu");
+                    ? "Chua co du lieu"
+                    : current.getJSONObject("condition").optString("text", "Chua co du lieu");
             int humidity = current.optInt("humidity", 0);
             double windKph = current.optDouble("wind_kph", 0);
 
-            return placeName + ": " + tempC + " °C, " + condition
-                    + ", độ ẩm " + humidity + "%, gió " + windKph + " km/h";
+            return placeName + ": " + tempC + " C, " + condition
+                    + ", do am " + humidity + "%, gio " + windKph + " km/h";
         } catch (Exception e) {
-            return "Chưa lấy được dữ liệu thời tiết: " + e.getMessage();
+            return "Chua lay duoc du lieu thoi tiet: " + e.getMessage();
         }
     }
 
     private static String getCityPopulation(String cityName, String countryName, double lat, double lon) {
         String population = getCityPopulationFromApiNinjas(cityName, lat, lon);
-        if (!"Chưa có dữ liệu".equals(population)) {
+        if (!"Chua co du lieu".equals(population)) {
             return population;
         }
 
@@ -163,13 +169,13 @@ public class CityService {
 
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 connection.disconnect();
-                return "Chưa có dữ liệu (mã: " + responseCode + ")";
+                return "Chua co du lieu (ma: " + responseCode + ")";
             }
 
             String body = new String(connection.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             JSONArray cities = new JSONArray(body);
             if (cities.isEmpty()) {
-                return "Chưa có dữ liệu";
+                return "Chua co du lieu";
             }
 
             JSONObject bestMatch = null;
@@ -196,9 +202,9 @@ public class CityService {
             }
 
             long population = bestMatch.optLong("population", 0);
-            return population > 0 ? String.valueOf(population) : "Chưa có dữ liệu";
+            return population > 0 ? String.valueOf(population) : "Chua co du lieu";
         } catch (Exception e) {
-            return "Chưa có dữ liệu";
+            return "Chua co du lieu";
         } finally {
             if (connection != null) {
                 connection.disconnect();
@@ -220,7 +226,7 @@ public class CityService {
             JSONObject json = new JSONObject(doc.text());
             JSONArray geonames = json.optJSONArray("geonames");
             if (geonames == null || geonames.isEmpty()) {
-                return "Chưa có dữ liệu";
+                return "Chua co du lieu";
             }
 
             long bestPopulation = 0;
@@ -232,9 +238,9 @@ public class CityService {
                 }
             }
 
-            return bestPopulation > 0 ? String.valueOf(bestPopulation) : "Chưa có dữ liệu";
+            return bestPopulation > 0 ? String.valueOf(bestPopulation) : "Chua co du lieu";
         } catch (Exception e) {
-            return "Chưa có dữ liệu";
+            return "Chua co du lieu";
         }
     }
 
@@ -259,5 +265,22 @@ public class CityService {
         String b = normalizeName(resolvedName);
 
         return a.equals(b) || a.contains(b) || b.contains(a);
+    }
+
+    private static String createErrorResponse(String message) {
+        return new JSONObject()
+                .put("status", "error")
+                .put("type", "city")
+                .put("message", message)
+                .toString(2);
+    }
+
+    private static JSONArray extractItems(String jsonText) {
+        try {
+            JSONObject json = new JSONObject(jsonText);
+            return json.optJSONArray("items") == null ? new JSONArray() : json.optJSONArray("items");
+        } catch (Exception e) {
+            return new JSONArray();
+        }
     }
 }

@@ -1,10 +1,10 @@
 package geoinfo.server.service;
 
 import geoinfo.server.utils.ApiConnector;
+import geoinfo.server.utils.ValidationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
-import geoinfo.server.utils.ValidationUtils;
 
 import java.text.Normalizer;
 import java.util.Scanner;
@@ -17,32 +17,32 @@ public class CountryService {
     public static String getCountryInfo(String input) {
         try {
             if (input == null) {
-                return "Lỗi khi lấy dữ liệu quốc gia: dữ liệu đầu vào rỗng.";
+                return createErrorResponse("Loi khi lay du lieu quoc gia: du lieu dau vao rong.");
             }
 
             input = input.replaceAll("\\s+", " ").trim();
 
             if (input.isEmpty()) {
-                return "Lỗi khi lấy dữ liệu quốc gia: dữ liệu đầu vào rỗng.";
+                return createErrorResponse("Loi khi lay du lieu quoc gia: du lieu dau vao rong.");
             }
 
             if (input.length() < 2) {
-                return "Lỗi khi lấy dữ liệu quốc gia: tên quốc gia quá ngắn.";
+                return createErrorResponse("Loi khi lay du lieu quoc gia: ten quoc gia qua ngan.");
             }
 
             if (input.length() > 100) {
-                return "Lỗi khi lấy dữ liệu quốc gia: tên quốc gia quá dài.";
+                return createErrorResponse("Loi khi lay du lieu quoc gia: ten quoc gia qua dai.");
             }
 
             if (!ValidationUtils.isValidLocationName(input)) {
-                return "Lỗi khi lấy dữ liệu quốc gia: tên quốc gia chứa ký tự không hợp lệ.";
+                return createErrorResponse("Loi khi lay du lieu quoc gia: ten quoc gia chua ky tu khong hop le.");
             }
 
             ensureCountriesLoaded();
 
             JSONObject json = findCountry(input);
             if (json == null) {
-                return "Lỗi khi lấy dữ liệu quốc gia: không tìm thấy quốc gia phù hợp.";
+                return createErrorResponse("Loi khi lay du lieu quoc gia: khong tim thay quoc gia phu hop.");
             }
 
             JSONObject nameObj = json.optJSONObject("name");
@@ -50,31 +50,30 @@ public class CountryService {
             String cca2 = json.optString("cca2", "");
 
             JSONArray latlngArr = json.optJSONArray("latlng");
-            String latlng = latlngArr == null ? "Không có" : latlngArr.toString();
+            String coordinates = latlngArr == null ? "Khong co" : latlngArr.toString();
             String population = String.valueOf(json.optLong("population", 0));
             String currencies = buildCurrencies(json.optJSONObject("currencies"));
             String languages = buildLanguages(json.optJSONObject("languages"));
-            String borders = formatBorders(json.optJSONArray("borders"));
-            String weather = CityService.getWeatherSummary(getCapitalOrCountryName(json, commonName));
-            String news = NewsService.getNewsInfo(commonName);
-            String attractions = AttractionService.getAttractionInfo(cca2);
+            String neighboringCountries = formatBorders(json.optJSONArray("borders"));
+            String currentWeather = CityService.getWeatherSummary(getCapitalOrCountryName(json, commonName));
+            String newsJson = NewsService.getNewsInfo(commonName);
+            String attractionsJson = AttractionService.getAttractionInfo(cca2);
 
-            return "===============================================\n"
-                    + "QUỐC GIA: " + commonName + "\n"
-                    + "Tọa độ: " + latlng + "\n"
-                    + "Dân số: " + population + "\n"
-                    + "Đơn vị tiền tệ: " + currencies + "\n"
-                    + "Ngôn ngữ: " + languages + "\n"
-                    + "Quốc gia láng giềng: " + borders + "\n"
-                    + "Thời tiết hiện tại: " + weather + "\n"
-                    + "===============================================\n"
-                    + "TIN TỨC\n"
-                    + news + "\n"
-                    + "===============================================\n"
-                    + attractions;
-
+            JSONObject response = new JSONObject();
+            response.put("status", "success");
+            response.put("type", "country");
+            response.put("name", commonName);
+            response.put("coordinates", coordinates);
+            response.put("population", population);
+            response.put("currencies", currencies);
+            response.put("languages", languages);
+            response.put("neighboringCountries", neighboringCountries);
+            response.put("currentWeather", currentWeather);
+            response.put("news", extractItems(newsJson));
+            response.put("attractions", extractItems(attractionsJson));
+            return response.toString(2);
         } catch (Exception e) {
-            return "Lỗi khi lấy dữ liệu quốc gia: " + e.getMessage();
+            return createErrorResponse("Loi khi lay du lieu quoc gia: " + e.getMessage());
         }
     }
 
@@ -82,9 +81,17 @@ public class CountryService {
         try {
             countriesCache = null;
             ensureCountriesLoaded();
-            return "Đã tải lại dữ liệu quốc gia.";
+            return new JSONObject()
+                    .put("status", "success")
+                    .put("type", "country")
+                    .put("message", "Da tai lai du lieu quoc gia.")
+                    .toString(2);
         } catch (Exception e) {
-            return "Lỗi khi tải lại dữ liệu quốc gia: " + e.getMessage();
+            return new JSONObject()
+                    .put("status", "error")
+                    .put("type", "country")
+                    .put("message", "Loi khi tai lai du lieu quoc gia: " + e.getMessage())
+                    .toString(2);
         }
     }
 
@@ -218,19 +225,19 @@ public class CountryService {
         }
 
         Document doc = ApiConnector.get(ALL_COUNTRIES_URL);
-        if (doc == null) {  // ✅ Check trước
-            throw new IllegalStateException("Không thể kết nối API quốc gia: " + ALL_COUNTRIES_URL);
+        if (doc == null) {
+            throw new IllegalStateException("Khong the ket noi API quoc gia: " + ALL_COUNTRIES_URL);
         }
         String body = doc.text();
         if (body == null || body.isBlank()) {
-            throw new IllegalStateException("Dữ liệu quốc gia trống hoặc không hợp lệ");
+            throw new IllegalStateException("Du lieu quoc gia trong hoac khong hop le");
         }
         countriesCache = new JSONArray(body);
     }
 
     private static String buildCurrencies(JSONObject currencies) {
         if (currencies == null || currencies.isEmpty()) {
-            return "Không có";
+            return "Khong co";
         }
 
         StringBuilder result = new StringBuilder();
@@ -253,12 +260,12 @@ public class CountryService {
             }
         }
 
-        return result.isEmpty() ? "Không có" : result.toString();
+        return result.isEmpty() ? "Khong co" : result.toString();
     }
 
     private static String buildLanguages(JSONObject languages) {
         if (languages == null || languages.isEmpty()) {
-            return "Không có";
+            return "Khong co";
         }
 
         StringBuilder result = new StringBuilder();
@@ -272,7 +279,7 @@ public class CountryService {
             }
         }
 
-        return result.isEmpty() ? "Không có" : result.toString();
+        return result.isEmpty() ? "Khong co" : result.toString();
     }
 
     private static String getCapitalOrCountryName(JSONObject country, String fallbackName) {
@@ -288,7 +295,7 @@ public class CountryService {
 
     private static String formatBorders(JSONArray borders) {
         if (borders == null || borders.isEmpty()) {
-            return "Không có";
+            return "Khong co";
         }
 
         StringBuilder result = new StringBuilder();
@@ -304,7 +311,7 @@ public class CountryService {
             result.append(findCountryNameByCca3(borderCode));
         }
 
-        return result.isEmpty() ? "Không có" : result.toString();
+        return result.isEmpty() ? "Khong co" : result.toString();
     }
 
     private static String findCountryNameByCca3(String cca3) {
@@ -353,12 +360,29 @@ public class CountryService {
         return normalizeAccentInsensitive(value).replace(" ", "");
     }
 
+    private static String createErrorResponse(String message) {
+        return new JSONObject()
+                .put("status", "error")
+                .put("type", "country")
+                .put("message", message)
+                .toString(2);
+    }
+
+    private static JSONArray extractItems(String jsonText) {
+        try {
+            JSONObject json = new JSONObject(jsonText);
+            return json.optJSONArray("items") == null ? new JSONArray() : json.optJSONArray("items");
+        } catch (Exception e) {
+            return new JSONArray();
+        }
+    }
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         String input = "";
 
         while (!input.equalsIgnoreCase("exit")) {
-            System.out.print("Nhập tên quốc gia: ");
+            System.out.print("Nhap ten quoc gia: ");
             input = scanner.nextLine();
 
             if (!input.equalsIgnoreCase("exit")) {

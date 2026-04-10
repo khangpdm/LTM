@@ -1,5 +1,7 @@
 package geoinfo.server.service;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -13,8 +15,14 @@ import java.nio.charset.StandardCharsets;
 public class NewsService {
 
     public static String getNewsInfo(String input) {
+        JSONObject response = new JSONObject()
+                .put("status", "success")
+                .put("type", "news")
+                .put("query", input == null ? "" : input.trim())
+                .put("items", new JSONArray());
+
         try {
-            String encoded = URLEncoder.encode(input, StandardCharsets.UTF_8);
+            String encoded = URLEncoder.encode(input == null ? "" : input, StandardCharsets.UTF_8);
             String rssUrl = "https://news.google.com/rss/search?q=" + encoded + "&hl=en-US&gl=US&ceid=US:en";
             URL url = new URL(rssUrl);
 
@@ -22,13 +30,9 @@ public class NewsService {
             Document doc = builder.parse(url.openStream());
 
             NodeList items = doc.getElementsByTagName("item");
+            JSONArray newsItems = new JSONArray();
             int limit = Math.min(items.getLength(), 5);
 
-            if (limit == 0) {
-                return "Không có tin tức liên quan.";
-            }
-
-            StringBuilder output = new StringBuilder();
             for (int i = 0; i < limit; i++) {
                 Element item = (Element) items.item(i);
                 Element titleEl = (Element) item.getElementsByTagName("title").item(0);
@@ -36,21 +40,24 @@ public class NewsService {
                 Element pubDateEl = (Element) item.getElementsByTagName("pubDate").item(0);
 
                 if (titleEl == null || linkEl == null || pubDateEl == null) {
-                    continue;  // Skip item này
+                    continue;
                 }
 
-                String title = item.getElementsByTagName("title").item(0).getTextContent();
-                String link = item.getElementsByTagName("link").item(0).getTextContent();
-                String pubDate = item.getElementsByTagName("pubDate").item(0).getTextContent();
-
-                output.append("- ").append(title).append("\n")
-                        .append("  Link: ").append(link).append("\n")
-                        .append("  Ngày: ").append(pubDate).append("\n");
+                newsItems.put(new JSONObject()
+                        .put("title", titleEl.getTextContent().trim())
+                        .put("link", linkEl.getTextContent().trim())
+                        .put("publishedDate", pubDateEl.getTextContent().trim()));
             }
 
-            return output.toString();
+            response.put("items", newsItems);
+            if (newsItems.isEmpty()) {
+                response.put("message", "No related news found.");
+            }
         } catch (Exception e) {
-            return "Lỗi khi lấy tin tức: " + e.getMessage();
+            response.put("status", "error");
+            response.put("message", "Failed to fetch news: " + e.getMessage());
         }
+
+        return response.toString(2);
     }
 }

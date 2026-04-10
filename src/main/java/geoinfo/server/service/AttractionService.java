@@ -16,8 +16,16 @@ public class AttractionService {
     private static final int MAX_ROWS = 3;
 
     public static String getAttractionInfo(String input) {
+        JSONObject response = new JSONObject()
+                .put("status", "success")
+                .put("type", "attractions")
+                .put("countryCode", input == null ? "" : input.trim().toUpperCase())
+                .put("items", new JSONArray());
+
         if (input == null || input.isBlank()) {
-            return "Không tìm thấy mã quốc gia.";
+            return response.put("status", "error")
+                    .put("message", "Country code is required.")
+                    .toString(2);
         }
 
         String countryCode = input.trim().toUpperCase();
@@ -33,33 +41,40 @@ public class AttractionService {
             JSONArray geonames = json.optJSONArray("geonames");
 
             if (geonames == null || geonames.isEmpty()) {
-                return "Không tìm thấy địa điểm du lịch cho quốc gia: " + countryCode;
+                return response.put("message", "No attractions found for the given country code.")
+                        .toString(2);
             }
 
-            StringBuilder result = new StringBuilder();
-            result.append("ĐỊA ĐIỂM DU LỊCH NỔI BẬT\n");
-            result.append("-----------------------------------------------\n");
-
+            JSONArray items = new JSONArray();
             for (int i = 0; i < geonames.length(); i++) {
-                JSONObject item = geonames.getJSONObject(i);
-                int geonameId = item.optInt("geonameId", 0);
+                JSONObject item = geonames.optJSONObject(i);
+                if (item == null) {
+                    continue;
+                }
 
+                int geonameId = item.optInt("geonameId", 0);
                 if (geonameId == 0) {
                     continue;
                 }
 
                 JSONObject detail = getAttractionDetail(geonameId);
-                result.append(formatAttractionDetail(i + 1, detail));
-                if (i < geonames.length() - 1) {
-                    result.append("\n");
-                }
+                items.put(buildAttractionItem(detail));
             }
-            return result.toString();
 
+            response.put("items", items);
+            if (items.isEmpty()) {
+                response.put("message", "No valid attraction details found.");
+            }
+
+            return response.toString(2);
         } catch (IOException e) {
-            return "Lỗi khi gọi API attraction: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+            return response.put("status", "error")
+                    .put("message", "Failed to call attraction API: " + e.getMessage())
+                    .toString(2);
         } catch (Exception e) {
-            return "Lỗi khi xử lý dữ liệu attraction: " + (e.getMessage() != null ? e.getMessage() : e.toString());
+            return response.put("status", "error")
+                    .put("message", "Failed to process attraction data: " + e.getMessage())
+                    .toString(2);
         }
     }
 
@@ -72,40 +87,41 @@ public class AttractionService {
         return new JSONObject(detailDoc.text());
     }
 
-    private static String formatAttractionDetail(int index, JSONObject detail) {
-        String name = detail.optString("name", "Không rõ tên");
+    private static JSONObject buildAttractionItem(JSONObject detail) {
+        String name = detail.optString("name", "Unknown");
         String asciiName = detail.optString("asciiName", "");
-        String adminName1 = detail.optString("adminName1", "Không rõ tỉnh/thành");
-        String adminName2 = detail.optString("adminName2", "Không rõ quận/huyện");
-        String countryName = detail.optString("countryName", "Không rõ quốc gia");
-        String fcodeName = detail.optString("fcodeName", "Không rõ loại");
+        String adminName1 = detail.optString("adminName1", "");
+        String adminName2 = detail.optString("adminName2", "");
+        String countryName = detail.optString("countryName", "");
+        String featureName = detail.optString("fcodeName", "");
         String lat = detail.optString("lat", "");
         String lng = detail.optString("lng", "");
-        String wikipediaURL = detail.optString("wikipediaURL", "");
+        String wikipediaUrl = detail.optString("wikipediaURL", "");
         String alternateNames = buildAlternateNames(detail.optJSONArray("alternateNames"));
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(index).append(". ").append(name).append("\n");
+        return new JSONObject()
+                .put("name", name)
+                .put("asciiName", asciiName)
+                .put("featureType", featureName)
+                .put("region", buildRegion(adminName2, adminName1, countryName))
+                .put("coordinates", buildCoordinates(lat, lng))
+                .put("wikipediaUrl", wikipediaUrl.isBlank() ? "" : "https://" + wikipediaUrl)
+                .put("alternateNames", alternateNames);
+    }
 
-        if (!asciiName.isBlank() && !asciiName.equalsIgnoreCase(name)) {
-            sb.append("   Tên ASCII : ").append(asciiName).append("\n");
+    private static String buildRegion(String adminName2, String adminName1, String countryName) {
+        StringBuilder region = new StringBuilder();
+        appendPart(region, adminName2);
+        appendPart(region, adminName1);
+        appendPart(region, countryName);
+        return region.toString();
+    }
+
+    private static String buildCoordinates(String lat, String lng) {
+        if (lat == null || lat.isBlank() || lng == null || lng.isBlank()) {
+            return "";
         }
-        sb.append("   Loại      : ").append(fcodeName).append("\n");
-        sb.append("   Khu vực   : ").append(adminName2).append(", ")
-                .append(adminName1).append(", ")
-                .append(countryName).append("\n");
-        sb.append("   Tọa độ    : ").append(lat).append(", ").append(lng).append("\n");
-
-        if (!wikipediaURL.isBlank()) {
-            sb.append("   Wikipedia : https://").append(wikipediaURL).append("\n");
-        }
-
-        if (!alternateNames.isBlank()) {
-            sb.append("   Tên khác  : ").append(alternateNames).append("\n");
-        }
-
-        sb.append("   ").append("-".repeat(55)).append("\n");
-        return sb.toString();
+        return lat + ", " + lng;
     }
 
     private static String buildAlternateNames(JSONArray alternateNames) {
@@ -123,7 +139,6 @@ public class AttractionService {
 
             String altName = alt.optString("name", "").trim();
             String lang = alt.optString("lang", "").trim();
-
             if (altName.isBlank() || "link".equalsIgnoreCase(lang)) {
                 continue;
             }
@@ -138,15 +153,21 @@ public class AttractionService {
         return result.toString();
     }
 
+    private static void appendPart(StringBuilder builder, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        if (!builder.isEmpty()) {
+            builder.append(", ");
+        }
+        builder.append(value.trim());
+    }
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-
-        System.out.print("Nhập mã quốc gia: ");
+        System.out.print("Nhap ma quoc gia: ");
         String input = scanner.nextLine();
-
-        String result = getAttractionInfo(input);
-        System.out.println(result);
-
+        System.out.println(getAttractionInfo(input));
         scanner.close();
     }
 }
