@@ -3,6 +3,7 @@ package geoinfo.client.gui.pages;
 import geoinfo.client.gui.utils.Configure;
 import geoinfo.client.gui.utils.Consts;
 import geoinfo.client.network.ClientService;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -14,7 +15,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
-import javafx.application.Platform;
+
+import java.util.function.Consumer;
 
 public class SearchEnginePage extends BorderPane {
 
@@ -34,7 +36,7 @@ public class SearchEnginePage extends BorderPane {
 
     private void initComponents() {
         txtSearch = new TextField();
-        txtSearch.setPromptText("Nhập từ khóa cần tìm kiếm ... ");
+        txtSearch.setPromptText("Nhap tu khoa can tim kiem ... ");
         txtSearch.setPrefHeight(Consts.SEARCHBAR_ITEM_HEIGHT);
         txtSearch.setStyle(
             "-fx-background-color: black;" +
@@ -121,55 +123,7 @@ public class SearchEnginePage extends BorderPane {
     }
 
     private void search() {
-        if (searching) {
-            return;
-        }
-
-        String keyword = txtSearch.getText().trim();
-        keyword = keyword.replaceAll("\\s+", " ").trim();
-        String type = cbbType.getValue();
-
-        if (keyword.isEmpty()) {
-            resultArea.setText("No results found. Try a different search term.");
-            return;
-        }
-
-        if (keyword.length() > 100) {
-            resultArea.setText("Từ khóa quá dài.");
-            return;
-        }
-
-        if (!keyword.matches("[\\p{L}\\p{M}0-9 .,'()-]+")) {
-            resultArea.setText("Từ khóa chứa ký tự không hợp lệ.");
-            return;
-        }
-
-        String request = type.toLowerCase() + ":" + keyword;
-        //String response = clientService.sendRequest(request);
-        String loadingMessage = type.equals("City")
-                ? "Dang tim kiem thanh pho..."
-                : "Dang tim kiem quoc gia...";
-
-        setSearchingState(true);
-        resultArea.setText(loadingMessage);
-
-        Thread thread = new Thread(() -> {
-            String response;
-            try {
-                response = clientService.sendRequest(request);
-            } catch (Exception ex) {
-                response = "Loi khi tim kiem: " + ex.getMessage();
-            }
-
-            final String finalResponse = response;
-            Platform.runLater(() -> {
-                resultArea.setText(finalResponse);
-                setSearchingState(false);
-            });
-        });
-
-        thread.setDaemon(true);
-        thread.start();
+        search(txtSearch.getText(), cbbType.getValue(), true, null);
     }
 
     private void setSearchingState(boolean searching) {
@@ -185,5 +139,87 @@ public class SearchEnginePage extends BorderPane {
 
     public void clearResult() {
         resultArea.clear();
+    }
+
+    public void searchCountryFromMap(String countryName, Consumer<String> onResult) {
+        search(countryName, "Country", false, onResult);
+    }
+
+    private void search(String keyword, String type, boolean updateMainResult, Consumer<String> onResult) {
+        if (searching) {
+            if (onResult != null) {
+                onResult.accept("Dang co mot yeu cau tim kiem khac.");
+            }
+            return;
+        }
+
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().replaceAll("\\s+", " ").trim();
+        String normalizedType = type == null ? "Country" : type;
+        String validationMessage = validateKeyword(normalizedKeyword);
+
+        if (validationMessage != null) {
+            if (updateMainResult) {
+                resultArea.setText(validationMessage);
+            }
+            if (onResult != null) {
+                onResult.accept(validationMessage);
+            }
+            return;
+        }
+
+        txtSearch.setText(normalizedKeyword);
+        cbbType.setValue(normalizedType);
+
+        String request = normalizedType.toLowerCase() + ":" + normalizedKeyword;
+        String loadingMessage = normalizedType.equals("City")
+                ? "Dang tim kiem thanh pho..."
+                : "Dang tim kiem quoc gia...";
+
+        setSearchingState(true);
+        if (updateMainResult) {
+            resultArea.setText(loadingMessage);
+        }
+        if (onResult != null) {
+            onResult.accept(loadingMessage);
+        }
+
+        Thread thread = new Thread(() -> {
+            String response;
+            try {
+                response = clientService.sendRequest(request);
+            } catch (Exception ex) {
+                response = "Loi khi tim kiem: " + ex.getMessage();
+            }
+
+            final String finalResponse = response;
+            Platform.runLater(() -> {
+                if (updateMainResult) {
+                    resultArea.setText(finalResponse);
+                }
+                if (onResult != null) {
+                    onResult.accept(finalResponse);
+                }
+                setSearchingState(false);
+            });
+        });
+
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private String validateKeyword(String keyword) {
+        if (keyword.isEmpty()) {
+            return "No results found. Try a different search term.";
+        }
+
+        if (keyword.length() > 100) {
+            return "Tu khoa qua dai.";
+        }
+
+        if (!keyword.matches("[\\p{L}\\p{M}0-9 .,'()-]+")) {
+            return "Tu khoa chua ky tu khong hop le.";
+        }
+
+        return null;
     }
 }

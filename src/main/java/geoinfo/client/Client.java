@@ -23,7 +23,7 @@ public class Client extends Application {
     public void start(Stage stage) {
         clientService = new ClientService("localhost", 12345);
         searchEnginePage = new SearchEnginePage(clientService);
-        mapSearchPage = new MapSearchPage(); // them clientService vao sau
+        mapSearchPage = new MapSearchPage(searchEnginePage);
         mainLayout = new BorderPane();
         header = new HBox();
         leftMenu = new VBox();
