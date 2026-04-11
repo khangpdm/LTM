@@ -169,18 +169,18 @@ public class MapSearchPage extends BorderPane {
         Label title = new Label(countryName);
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-        SearchResultPane resultPane = searchEnginePage.createResultPane();
-        resultPane.setText("Dang tim kiem quoc gia...");
+//        SearchResultPane resultPane = searchEnginePage.createResultPane();
+//        resultPane.setText("Dang tim kiem quoc gia...");
 
         BorderPane root = new BorderPane();
         root.setTop(title);
-        root.setCenter(resultPane);
+//        root.setCenter(resultPane);
         root.setPadding(new Insets(16));
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
 
         popup.setScene(new Scene(root, 760, 560));
         popup.show();
 
-        resultPane.search("country:" + countryName, "Dang tim kiem quoc gia...");
+//        resultPane.search("country:" + countryName, "Dang tim kiem quoc gia...");
     }
 }
