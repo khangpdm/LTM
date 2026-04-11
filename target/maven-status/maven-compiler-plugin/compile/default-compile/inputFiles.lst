@@ -1,30 +1,15 @@
-<<<<<<< HEAD
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\Client.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\gui\components\MButton.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\gui\pages\MapSearchPage.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\gui\pages\SearchEnginePage.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\gui\utils\Configure.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\gui\utils\Consts.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\client\network\ClientService.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\handler\ClientHandler.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\processor\DataProcessor.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\Server.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\service\AttractionService.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\service\CityService.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\service\CountryService.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\service\HotelService.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\service\HotelServiceLimit.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\service\NewsService.java
-Q:\HocKi2Nam3\LTUDM\LTM\src\main\java\geoinfo\server\utils\ApiConnector.java
-=======
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\Client.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\components\MButton.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\components\MTable.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\components\SearchResultPane.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\pages\MapSearchPage.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\pages\SearchEnginePage.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\utils\Configure.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\utils\Consts.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\network\ClientService.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\handler\ClientHandler.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\network\ServerEndpoint.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\network\ServerRegistryApi.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\processor\DataProcessor.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\Server.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\service\AttractionService.java
@@ -35,4 +20,3 @@ D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\service\HotelServiceLimit.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\service\NewsService.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\utils\ApiConnector.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\utils\ValidationUtils.java
->>>>>>> 0d6f532be6b7d58491bb489e957cf52873a10930

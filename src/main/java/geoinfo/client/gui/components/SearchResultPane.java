@@ -39,6 +39,10 @@ public class SearchResultPane extends VBox {
     private String pendingMoreInfoRequest;
     private String loadedMoreInfoRequest;
 
+    // Thêm biến lưu cache more info
+    private JSONObject cachedMoreInfo;
+    private boolean isLoadingMoreInfo;
+
     public SearchResultPane(ClientService clientService) {
         this.clientService = clientService;
 
@@ -54,7 +58,7 @@ public class SearchResultPane extends VBox {
         titleLabel.setVisible(false);
         titleLabel.setManaged(false);
 
-        moreInfoButton = new Button("More Information");
+        moreInfoButton = new Button("Them thong tin");
         moreInfoButton.setVisible(false);
         moreInfoButton.setManaged(false);
         moreInfoButton.setDisable(true);
@@ -125,16 +129,46 @@ public class SearchResultPane extends VBox {
             return;
         }
 
+        // === THÊM: Dùng cache nếu đã có ===
+        if (cachedMoreInfo != null) {
+            renderResponse(cachedMoreInfo.toString(), true);
+            loadedMoreInfoRequest = request;
+            moreInfoButton.setText("Da them thong tin");
+            moreInfoButton.setDisable(true);
+            return;
+        }
+
+        // === THÊM: Nếu đang loading thì chờ ===
+        if (isLoadingMoreInfo) {
+            moreInfoButton.setDisable(true);
+            moreInfoButton.setText("Dang tai...");
+
+            // Poll chờ cache sẵn sàng
+            SEARCH_EXECUTOR.submit(() -> {
+                while (isLoadingMoreInfo) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                Platform.runLater(this::fetchMoreInfo);
+            });
+            return;
+        }
+
+        // Fallback: gọi API như cũ nếu không có cache
         long requestId = latestRequestId.get();
         moreInfoButton.setDisable(true);
-        moreInfoButton.setText("Loading...");
+        moreInfoButton.setText("Dang tai them...");
 
         SEARCH_EXECUTOR.submit(() -> {
             String response;
             try {
                 response = clientService.sendRequest(request);
             } catch (Exception ex) {
-                response = "Error loading: " + ex.getMessage();
+                response = "Loi khi tai them thong tin: " + ex.getMessage();
             }
 
             String finalResponse = response;
@@ -144,9 +178,8 @@ public class SearchResultPane extends VBox {
                 }
                 renderResponse(finalResponse, true);
                 loadedMoreInfoRequest = request;
-//                moreInfoButton.setText("Da them thong tin");
-//                moreInfoButton.setDisable(true);
-                moreInfoButton.setVisible(false);
+                moreInfoButton.setText("Da them thong tin");
+                moreInfoButton.setDisable(true);
             });
         });
     }
@@ -199,17 +232,53 @@ public class SearchResultPane extends VBox {
 
         pendingMoreInfoRequest = json.optString("moreInfoRequest", "").trim();
         loadedMoreInfoRequest = null;
+        cachedMoreInfo = null;           // === THÊM: reset cache ===
+        isLoadingMoreInfo = false;      // === THÊM: reset loading flag ===
         if (pendingMoreInfoRequest.isBlank()) {
             moreInfoButton.setVisible(false);
             moreInfoButton.setManaged(false);
             moreInfoButton.setDisable(true);
-            moreInfoButton.setText("More Information");
+            moreInfoButton.setText("Them thong tin");
         } else {
             moreInfoButton.setVisible(true);
             moreInfoButton.setManaged(true);
             moreInfoButton.setDisable(false);
-            moreInfoButton.setText(json.optString("moreInfoLabel", "More Information"));
+            moreInfoButton.setText(json.optString("moreInfoLabel", "Them thong tin"));
+            // === THÊM: Prefetch more info trong background ===
+            prefetchMoreInfo(pendingMoreInfoRequest);
+
         }
+    }
+
+    private void prefetchMoreInfo(String request) {
+        if (request == null || request.isBlank()) {
+            return;
+        }
+
+        long requestId = latestRequestId.get();
+        isLoadingMoreInfo = true;
+
+        SEARCH_EXECUTOR.submit(() -> {
+            JSONObject result = null;
+            try {
+                String response = clientService.sendRequest(request);
+                JSONObject json = new JSONObject(response);
+                if ("success".equalsIgnoreCase(json.optString("status"))) {
+                    result = json;
+                }
+            } catch (Exception ex) {
+                // Ignore error, user can retry manually
+            }
+
+            JSONObject finalResult = result;
+            Platform.runLater(() -> {
+                // Chỉ cache nếu vẫn đang ở cùng request
+                if (requestId == latestRequestId.get()) {
+                    cachedMoreInfo = finalResult;
+                    isLoadingMoreInfo = false;
+                }
+            });
+        });
     }
 
     private void showJsonAsTables(JSONObject json) {
@@ -422,7 +491,10 @@ public class SearchResultPane extends VBox {
         moreInfoButton.setVisible(false);
         moreInfoButton.setManaged(false);
         moreInfoButton.setDisable(true);
-        moreInfoButton.setText("More Information");
+        moreInfoButton.setText("Them thong tin");
+
+        cachedMoreInfo = null;
+        isLoadingMoreInfo = false;
     }
 
     private void showMessage(String message) {
