@@ -85,7 +85,7 @@ public class CountryService {
             return new JSONObject()
                     .put("status", "success")
                     .put("type", "country")
-                    .put("message", "Da tai lai du lieu quoc gia.")
+                    .put("message", "The data has been reloaded.")
                     .toString(2);
         } catch (Exception e) {
             return new JSONObject()
@@ -102,11 +102,13 @@ public class CountryService {
         }
 
         input = input.replaceAll("\\s+", " ").trim();
+
+        String cleanInput = normalizeName(input);
+        if (cleanInput.length() < 2 && !cleanInput.equals("y")) { // ngoại lệ khi tìm nước "ý"
+            throw new IllegalArgumentException("My country name is too short.");
+        }
         if (input.isEmpty()) {
             throw new IllegalArgumentException("No data.");
-        }
-        if (input.length() < 2) {
-            throw new IllegalArgumentException("My country name is too short.");
         }
         if (input.length() > 100) {
             throw new IllegalArgumentException("My country name is too long.");
@@ -127,118 +129,32 @@ public class CountryService {
         return country;
     }
 
-    private static synchronized JSONObject findCountry(String keyword, boolean allowShortCodeAltMatch) {
-        String normalizedKeyword = normalize(keyword);
-        String compactKeyword = normalizeCompact(keyword);
-        String accentInsensitiveKeyword = normalizeAccentInsensitive(keyword);
-        String compactAccentInsensitiveKeyword = normalizeCompactAccentInsensitive(keyword);
 
-        JSONObject exactCommonMatch = null;
-        JSONObject exactOfficialMatch = null;
-        JSONObject exactAltSpellingMatch = null;
-        JSONObject compactCommonMatch = null;
-        JSONObject compactOfficialMatch = null;
-        JSONObject compactAltSpellingMatch = null;
-        JSONObject accentInsensitiveCommonMatch = null;
-        JSONObject accentInsensitiveOfficialMatch = null;
-        JSONObject accentInsensitiveAltSpellingMatch = null;
-        JSONObject compactAccentInsensitiveCommonMatch = null;
-        JSONObject compactAccentInsensitiveOfficialMatch = null;
-        JSONObject compactAccentInsensitiveAltSpellingMatch = null;
-        JSONObject partialMatch = null;
+    private static synchronized JSONObject findCountry(String keyword, boolean allowShortCodeAltMatch) {
+        String cleanKeyword = normalizeName(keyword);
+        if (cleanKeyword.isEmpty()) return null;
 
         for (int i = 0; i < countriesCache.length(); i++) {
             JSONObject country = countriesCache.getJSONObject(i);
-            if (country == null) {
-                continue;
+            JSONObject nameObj = country.optJSONObject("name");
+
+            // 1. Kiểm tra Common Name & Official Name
+            if (normalizeName(nameObj.optString("common")).equals(cleanKeyword) ||
+                    normalizeName(nameObj.optString("official")).equals(cleanKeyword)) {
+                return country;
             }
 
-            JSONObject name = country.optJSONObject("name");
-            String commonName = name == null ? "" : normalize(name.optString("common"));
-            String officialName = name == null ? "" : normalize(name.optString("official"));
-            String compactCommonName = normalizeCompact(commonName);
-            String compactOfficialName = normalizeCompact(officialName);
-            String accentInsensitiveCommonName = normalizeAccentInsensitive(commonName);
-            String accentInsensitiveOfficialName = normalizeAccentInsensitive(officialName);
-            String compactAccentInsensitiveCommonName = normalizeCompactAccentInsensitive(commonName);
-            String compactAccentInsensitiveOfficialName = normalizeCompactAccentInsensitive(officialName);
-
-            if (normalizedKeyword.equals(commonName)) {
-                exactCommonMatch = country;
-                break;
-            }
-            if (exactOfficialMatch == null && normalizedKeyword.equals(officialName)) {
-                exactOfficialMatch = country;
-            }
-            if (compactCommonMatch == null && compactKeyword.equals(compactCommonName)) {
-                compactCommonMatch = country;
-            }
-            if (compactOfficialMatch == null && compactKeyword.equals(compactOfficialName)) {
-                compactOfficialMatch = country;
-            }
-            if (accentInsensitiveCommonMatch == null && accentInsensitiveKeyword.equals(accentInsensitiveCommonName)) {
-                accentInsensitiveCommonMatch = country;
-            }
-            if (accentInsensitiveOfficialMatch == null && accentInsensitiveKeyword.equals(accentInsensitiveOfficialName)) {
-                accentInsensitiveOfficialMatch = country;
-            }
-            if (compactAccentInsensitiveCommonMatch == null
-                    && compactAccentInsensitiveKeyword.equals(compactAccentInsensitiveCommonName)) {
-                compactAccentInsensitiveCommonMatch = country;
-            }
-            if (compactAccentInsensitiveOfficialMatch == null
-                    && compactAccentInsensitiveKeyword.equals(compactAccentInsensitiveOfficialName)) {
-                compactAccentInsensitiveOfficialMatch = country;
-            }
-
+            // 2. Kiểm tra Alt Spellings (Tên thay thế, mã code)
             JSONArray altSpellings = country.optJSONArray("altSpellings");
             if (altSpellings != null) {
                 for (int j = 0; j < altSpellings.length(); j++) {
-                    String altSpelling = altSpellings.optString(j);
-                    if (!allowShortCodeAltMatch && isShortCountryCodeToken(altSpelling)) {
-                        continue;
-                    }
-                    String normalizedAlt = normalize(altSpelling);
-                    String compactAlt = normalizeCompact(altSpelling);
-                    String accentInsensitiveAlt = normalizeAccentInsensitive(altSpelling);
-                    String compactAccentInsensitiveAlt = normalizeCompactAccentInsensitive(altSpelling);
-
-                    if (exactAltSpellingMatch == null && normalizedKeyword.equals(normalizedAlt)) {
-                        exactAltSpellingMatch = country;
-                    }
-                    if (compactAltSpellingMatch == null && compactKeyword.equals(compactAlt)) {
-                        compactAltSpellingMatch = country;
-                    }
-                    if (accentInsensitiveAltSpellingMatch == null
-                            && accentInsensitiveKeyword.equals(accentInsensitiveAlt)) {
-                        accentInsensitiveAltSpellingMatch = country;
-                    }
-                    if (compactAccentInsensitiveAltSpellingMatch == null
-                            && compactAccentInsensitiveKeyword.equals(compactAccentInsensitiveAlt)) {
-                        compactAccentInsensitiveAltSpellingMatch = country;
-                    }
+                    String alt = altSpellings.getString(j);
+                    if (!allowShortCodeAltMatch && alt.length() <= 3) continue;
+                    if (normalizeName(alt).equals(cleanKeyword)) return country;
                 }
             }
-
-            if (partialMatch == null && normalizedKeyword.length() >= 4
-                    && (commonName.startsWith(normalizedKeyword) || officialName.startsWith(normalizedKeyword))) {
-                partialMatch = country;
-            }
         }
-
-        if (exactCommonMatch != null) return exactCommonMatch;
-        if (exactOfficialMatch != null) return exactOfficialMatch;
-        if (exactAltSpellingMatch != null) return exactAltSpellingMatch;
-        if (compactCommonMatch != null) return compactCommonMatch;
-        if (compactOfficialMatch != null) return compactOfficialMatch;
-        if (compactAltSpellingMatch != null) return compactAltSpellingMatch;
-        if (accentInsensitiveCommonMatch != null) return accentInsensitiveCommonMatch;
-        if (accentInsensitiveOfficialMatch != null) return accentInsensitiveOfficialMatch;
-        if (accentInsensitiveAltSpellingMatch != null) return accentInsensitiveAltSpellingMatch;
-        if (compactAccentInsensitiveCommonMatch != null) return compactAccentInsensitiveCommonMatch;
-        if (compactAccentInsensitiveOfficialMatch != null) return compactAccentInsensitiveOfficialMatch;
-        if (compactAccentInsensitiveAltSpellingMatch != null) return compactAccentInsensitiveAltSpellingMatch;
-        return partialMatch;
+        return null; // Nếu không khớp chính xác, có thể thêm logic partialMatch ở đây nếu muốn
     }
 
     private static synchronized void ensureCountriesLoaded() throws Exception {
@@ -365,30 +281,14 @@ public class CountryService {
         return FLAG_URL_TEMPLATE.formatted(cca2.trim().toLowerCase());
     }
 
-    private static String normalize(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.trim()
-                .toLowerCase()
-                .replaceAll("[\\p{Punct}’‘`]", " ")
-                .replaceAll("\\s+", " ");
-    }
-
-    private static String normalizeCompact(String value) {
-        return normalize(value).replace(" ", "");
-    }
-
-    private static String normalizeAccentInsensitive(String value) {
-        String normalized = normalize(value);
-        String decomposed = Normalizer.normalize(normalized, Normalizer.Form.NFD);
-        return decomposed.replaceAll("\\p{M}+", "")
-                .replace('đ', 'd')
-                .replace('Đ', 'D');
-    }
-
-    private static String normalizeCompactAccentInsensitive(String value) {
-        return normalizeAccentInsensitive(value).replace(" ", "");
+    private static String normalizeName(String value) {
+        if (value == null) return "";
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD);
+        normalized = normalized.replaceAll("\\p{M}+", "");
+        normalized = normalized.replace("đ", "d").replace("Đ", "D");
+        return normalized.toLowerCase()
+                .replaceAll("[^a-z0-9]", "") // Xóa sạch ký tự đặc biệt và CẢ KHOẢNG TRẮNG
+                .trim();
     }
 
     private static boolean isUppercaseCountryCodeQuery(String input) {
@@ -412,15 +312,10 @@ public class CountryService {
             return keyword;
         }
 
-        String normalizedKeyword = normalizeAccentInsensitive(keyword);
-        String compactKeyword = normalizeCompactAccentInsensitive(keyword);
+        String cleanKeyword = normalizeName(keyword);
 
-        String mapped = countryAliasCache.get(normalizedKeyword);
-        if (mapped != null && !mapped.isBlank()) {
-            return mapped;
-        }
-
-        mapped = countryAliasCache.get(compactKeyword);
+        // Truy vấn trực tiếp từ Cache
+        String mapped = countryAliasCache.get(cleanKeyword);
         if (mapped != null && !mapped.isBlank()) {
             return mapped;
         }
@@ -452,35 +347,6 @@ public class CountryService {
         countryAliasCache = aliases.isEmpty() ? Map.of() : Map.copyOf(aliases);
     }
 
-    private static void addCountryAlias(Map<String, String> aliases, String rawLine) {
-        if (rawLine == null) {
-            return;
-        }
-
-        String line = rawLine.replace("\uFEFF", "").trim();
-        if (line.isEmpty() || line.startsWith("#")) {
-            return;
-        }
-
-        if (line.length() >= 2 && line.startsWith("\"") && line.endsWith("\"")) {
-            line = line.substring(1, line.length() - 1).trim();
-        }
-
-        int splitIndex = line.indexOf(',');
-        if (splitIndex <= 0 || splitIndex >= line.length() - 1) {
-            return;
-        }
-
-        String alias = stripWrappingQuotes(line.substring(0, splitIndex));
-        String canonicalName = stripWrappingQuotes(line.substring(splitIndex + 1));
-        addAliasMapping(aliases, alias, canonicalName);
-    }
-
-    private static void addDefaultCountryAliases(Map<String, String> aliases) {
-        addAliasMapping(aliases, "my", "United States");
-        addAliasMapping(aliases, "hoa ky", "United States");
-    }
-
     private static void addAliasMapping(Map<String, String> aliases, String alias, String canonicalName) {
         if (alias == null || canonicalName == null) {
             return;
@@ -491,10 +357,31 @@ public class CountryService {
             return;
         }
 
-        String normalizedAlias = normalizeAccentInsensitive(alias);
-        String compactAlias = normalizeCompactAccentInsensitive(alias);
-        aliases.putIfAbsent(normalizedAlias, normalizedCanonicalName);
-        aliases.putIfAbsent(compactAlias, normalizedCanonicalName);
+        String cleanAlias = normalizeName(alias);
+        aliases.putIfAbsent(cleanAlias, normalizedCanonicalName);
+    }
+
+    private static void addDefaultCountryAliases(Map<String, String> aliases) {
+        addAliasMapping(aliases, "usa", "United States");
+    }
+
+    private static void addCountryAlias(Map<String, String> aliases, String rawLine) {
+        if (rawLine == null) return;
+        // Xóa ký tự BOM và khoảng trắng thừa
+        String line = rawLine.replace("\uFEFF", "").trim();
+        if (line.isEmpty() || line.startsWith("#")) return;
+
+        if (line.startsWith("\"") && line.endsWith("\"")) {
+            line = line.substring(1, line.length() - 1);
+        }
+
+        String[] parts = line.split(",");
+        if (parts.length < 2) return;
+
+        String alias = stripWrappingQuotes(parts[0]);
+        String canonicalName = stripWrappingQuotes(parts[1]);
+
+        addAliasMapping(aliases, alias, canonicalName);
     }
 
     private static String stripWrappingQuotes(String value) {
@@ -538,7 +425,6 @@ public class CountryService {
                 System.out.println(getCountryInfo(input));
             }
         }
-
         scanner.close();
     }
 }
