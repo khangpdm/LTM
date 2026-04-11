@@ -39,9 +39,11 @@ public class SearchResultPane extends VBox {
     private String pendingMoreInfoRequest;
     private String loadedMoreInfoRequest;
 
-    // Thêm biến lưu cache more info
     private JSONObject cachedMoreInfo;
     private boolean isLoadingMoreInfo;
+
+    private JSONObject cachedHotels;
+    private boolean isLoadingHotels;
 
     public SearchResultPane(ClientService clientService) {
         this.clientService = clientService;
@@ -233,7 +235,8 @@ public class SearchResultPane extends VBox {
         pendingMoreInfoRequest = json.optString("moreInfoRequest", "").trim();
         loadedMoreInfoRequest = null;
         cachedMoreInfo = null;           // === THÊM: reset cache ===
-        isLoadingMoreInfo = false;      // === THÊM: reset loading flag ===
+        isLoadingMoreInfo = false;       // === THÊM: reset loading flag ===
+
         if (pendingMoreInfoRequest.isBlank()) {
             moreInfoButton.setVisible(false);
             moreInfoButton.setManaged(false);
@@ -244,9 +247,14 @@ public class SearchResultPane extends VBox {
             moreInfoButton.setManaged(true);
             moreInfoButton.setDisable(false);
             moreInfoButton.setText(json.optString("moreInfoLabel", "Them thong tin"));
+
             // === THÊM: Prefetch more info trong background ===
             prefetchMoreInfo(pendingMoreInfoRequest);
 
+            String hotelsRequest = json.optString("hotelsRequest", "").trim();
+            if (!hotelsRequest.isBlank()) {
+                prefetchHotels(hotelsRequest);
+            }
         }
     }
 
@@ -257,6 +265,7 @@ public class SearchResultPane extends VBox {
 
         long requestId = latestRequestId.get();
         isLoadingMoreInfo = true;
+        cachedMoreInfo = null;
 
         SEARCH_EXECUTOR.submit(() -> {
             JSONObject result = null;
@@ -267,15 +276,52 @@ public class SearchResultPane extends VBox {
                     result = json;
                 }
             } catch (Exception ex) {
-                // Ignore error, user can retry manually
+                // Ignore error
             }
 
             JSONObject finalResult = result;
             Platform.runLater(() -> {
-                // Chỉ cache nếu vẫn đang ở cùng request
                 if (requestId == latestRequestId.get()) {
                     cachedMoreInfo = finalResult;
                     isLoadingMoreInfo = false;
+                }
+            });
+        });
+    }
+
+    private void prefetchHotels(String request) {
+        if (request == null || request.isBlank()) {
+            return;
+        }
+
+        long requestId = latestRequestId.get();
+        isLoadingHotels = true;
+
+        SEARCH_EXECUTOR.submit(() -> {
+            JSONObject result = null;
+            try {
+                String response = clientService.sendRequest(request);
+                JSONObject json = new JSONObject(response);
+                if ("success".equalsIgnoreCase(json.optString("status"))) {
+                    result = json;
+                }
+            } catch (Exception ex) {
+                // Ignore error
+            }
+
+            JSONObject finalResult = result;
+            Platform.runLater(() -> {
+                if (requestId == latestRequestId.get()) {
+                    cachedHotels = finalResult;
+                    isLoadingHotels = false;
+
+                    // Tự động append hotels khi load xong
+                    if (cachedHotels != null) {
+                        JSONArray hotels = cachedHotels.optJSONArray("hotels");
+                        if (hotels != null && !hotels.isEmpty()) {
+                            addHotelSection("Hotels", hotels);
+                        }
+                    }
                 }
             });
         });
@@ -495,6 +541,9 @@ public class SearchResultPane extends VBox {
 
         cachedMoreInfo = null;
         isLoadingMoreInfo = false;
+
+        cachedHotels = null;
+        isLoadingHotels = false;
     }
 
     private void showMessage(String message) {

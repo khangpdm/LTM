@@ -118,12 +118,26 @@ public class CityService {
                 return createErrorResponse("Loi khi lay them thong tin thanh pho: khong tim thay thanh pho phu hop.");
             }
 
+            // === GỌI SONG SONG ===
+            CompletableFuture<JSONArray> newsF = CompletableFuture.supplyAsync(
+                    () -> extractItems(NewsService.getNewsInfo(name)),
+                    BACKGROUND_EXECUTOR
+            ).exceptionally(e -> new JSONArray());
+
+            CompletableFuture<JSONArray> hotelsF = CompletableFuture.supplyAsync(
+                    () -> extractItems(HotelService.getHotelsByCity(name)),
+                    BACKGROUND_EXECUTOR
+            ).exceptionally(e -> new JSONArray());
+
+            // Chờ cả 2 hoàn thành
+            CompletableFuture.allOf(newsF, hotelsF).join();
+
             JSONObject response = new JSONObject();
             response.put("status", "success");
             response.put("type", "cityMoreInfo");
             response.put("name", name);
-            response.put("news", extractItems(NewsService.getNewsInfo(name)));
-            response.put("hotels", extractItems(HotelService.getHotelsByCity(name)));
+            response.put("news", newsF.join());
+            response.put("hotels", hotelsF.join());
             return response.toString(2);
         } catch (Exception e) {
             return createErrorResponse("Loi khi lay them thong tin thanh pho: " + e.getMessage());
