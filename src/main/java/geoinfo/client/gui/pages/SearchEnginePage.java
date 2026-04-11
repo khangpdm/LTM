@@ -49,12 +49,12 @@ public class SearchEnginePage extends BorderPane {
         txtSearch.setPrefHeight(Consts.SEARCHBAR_ITEM_HEIGHT);
         txtSearch.setStyle(
                 "-fx-background-color: black;" +
-                "-fx-text-fill: white;" +
-                "-fx-prompt-text-fill: #888888;" +
-                "-fx-border-color: transparent;" +
-                "-fx-background-radius: 12;" +
-                "-fx-background-insets: 0;" +
-                "-fx-border-width: 0;"
+                        "-fx-text-fill: white;" +
+                        "-fx-prompt-text-fill: #888888;" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-background-insets: 0;" +
+                        "-fx-border-width: 0;"
         );
         txtSearch.setOnAction(e -> search());
 
@@ -97,10 +97,10 @@ public class SearchEnginePage extends BorderPane {
         HBox searchBox = new HBox(0);
         searchBox.setStyle(
                 "-fx-background-color: black;" +
-                "-fx-border-radius: 12;" +
-                "-fx-border-color: #00AEEF;" +
-                "-fx-padding: 0 3;" +
-                "-fx-background-radius: 14;"
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-color: #00AEEF;" +
+                        "-fx-padding: 0 3;" +
+                        "-fx-background-radius: 14;"
         );
         HBox.setHgrow(txtSearch, Priority.ALWAYS);
 
@@ -355,11 +355,11 @@ public class SearchEnginePage extends BorderPane {
         messageLabel.setAlignment(Pos.CENTER_LEFT);
         messageLabel.setStyle(
                 "-fx-background-color: #f8fafc;" +
-                "-fx-border-color: #cbd5e1;" +
-                "-fx-border-radius: 8;" +
-                "-fx-background-radius: 8;" +
-                "-fx-padding: 16;" +
-                "-fx-text-fill: #111827;"
+                        "-fx-border-color: #cbd5e1;" +
+                        "-fx-border-radius: 8;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-padding: 16;" +
+                        "-fx-text-fill: #111827;"
         );
         resultContainer.getChildren().add(messageLabel);
     }

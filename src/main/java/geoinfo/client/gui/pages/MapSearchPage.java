@@ -1,11 +1,11 @@
 package geoinfo.client.gui.pages;
 
+import geoinfo.client.gui.components.SearchResultPane;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -27,20 +27,20 @@ public class MapSearchPage extends BorderPane {
     private Group map;
     private Pane mapContainer;
 
-    public MapSearchPage(SearchEnginePage searchEnginePage){
+    public MapSearchPage(SearchEnginePage searchEnginePage) {
         this.searchEnginePage = searchEnginePage;
         initComponents();
         buildLayout();
     }
 
-    public Group loadSvgMap(String filePath) throws Exception{
+    public Group loadSvgMap(String filePath) throws Exception {
         Group mapGroup = new Group();
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(new File(filePath));
 
         NodeList nodeList = doc.getElementsByTagName("path");
-        for (int i=0; i<nodeList.getLength(); i++){
+        for (int i = 0; i < nodeList.getLength(); i++) {
             Element element = (Element) nodeList.item(i);
             String pathData = element.getAttribute("d");
             String nameCountry = element.getAttribute("title");
@@ -50,24 +50,22 @@ public class MapSearchPage extends BorderPane {
             svgPath.setStroke(Color.BLACK);
             svgPath.setStrokeWidth(0.2);
 
-            svgPath.setOnMouseEntered(e->{
+            svgPath.setOnMouseEntered(event -> {
                 svgPath.setFill(Color.GRAY);
                 mapTooltip.setText(nameCountry);
                 mapTooltip.setVisible(true);
             });
-            svgPath.setOnMouseMoved(e -> {
-                Point2D localMouse = mapContainer.sceneToLocal(e.getSceneX(), e.getSceneY());
+            svgPath.setOnMouseMoved(event -> {
+                Point2D localMouse = mapContainer.sceneToLocal(event.getSceneX(), event.getSceneY());
                 mapTooltip.setLayoutX(localMouse.getX() + 15);
                 mapTooltip.setLayoutY(localMouse.getY() + 15);
             });
-
-            svgPath.setOnMouseExited(e -> {
+            svgPath.setOnMouseExited(event -> {
                 svgPath.setFill(Color.AZURE);
                 mapTooltip.setVisible(false);
             });
-
-            svgPath.setOnMouseClicked(e -> {
-                e.consume();
+            svgPath.setOnMouseClicked(event -> {
+                event.consume();
                 showCountryPopup(nameCountry);
             });
 
@@ -81,7 +79,7 @@ public class MapSearchPage extends BorderPane {
         final double[] translateAnchor = new double[2];
 
         container.setOnScroll(event -> {
-            double zoomFactor = (event.getDeltaY() > 0) ? 1.1 : 0.9;
+            double zoomFactor = event.getDeltaY() > 0 ? 1.1 : 0.9;
             double newScale = content.getScaleX() * zoomFactor;
 
             if (newScale >= 0.5 && newScale <= 10.0) {
@@ -157,7 +155,7 @@ public class MapSearchPage extends BorderPane {
         mapContainer.setClip(clip);
         enableZoomAndPan(mapContainer, map);
 
-        this.setCenter(mapContainer);
+        setCenter(mapContainer);
     }
 
     private void showCountryPopup(String countryName) {
@@ -171,19 +169,18 @@ public class MapSearchPage extends BorderPane {
         Label title = new Label(countryName);
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-        TextArea resultArea = new TextArea("Dang tim kiem quoc gia...");
-        resultArea.setEditable(false);
-        resultArea.setWrapText(true);
+//        SearchResultPane resultPane = searchEnginePage.createResultPane();
+//        resultPane.setText("Dang tim kiem quoc gia...");
 
         BorderPane root = new BorderPane();
         root.setTop(title);
-        root.setCenter(resultArea);
+//        root.setCenter(resultPane);
         root.setPadding(new Insets(16));
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
 
-        popup.setScene(new Scene(root, 720, 520));
+        popup.setScene(new Scene(root, 760, 560));
         popup.show();
 
-//        searchEnginePage.searchCountryFromMap(countryName, resultArea::setText);
+//        resultPane.search("country:" + countryName, "Dang tim kiem quoc gia...");
     }
 }

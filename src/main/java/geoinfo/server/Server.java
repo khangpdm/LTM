@@ -1,91 +1,102 @@
 package geoinfo.server;
 
 import geoinfo.server.handler.ClientHandler;
+import geoinfo.server.network.ServerEndpoint;
+import geoinfo.server.network.ServerRegistryApi;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server {
     private int port;
-    private ThreadPoolExecutor threadPool;
+    private final ThreadPoolExecutor threadPool;
     private volatile boolean isRunning;
     private ServerSocket serverSocket;
 
-    // Constructor với các tham số tùy chỉnh
     public Server(int port, int corePoolSize, int maxPoolSize, int queueCapacity) {
         this.port = port;
         this.isRunning = true;
-
-        // Tạo ThreadPoolExecutor với đầy đủ tham số
         this.threadPool = new ThreadPoolExecutor(
-                corePoolSize,           // Số thread tối thiểu luôn duy trì
-                maxPoolSize,            // Số thread tối đa
-                60L,                    // Thời gian giữ thread rảnh
-                TimeUnit.SECONDS,       // Đơn vị thời gian
+                corePoolSize,
+                maxPoolSize,
+                60L,
+                TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(queueCapacity),  // Hàng đợi chờ
-                new CustomThreadFactory(),               // Tạo thread với tên tùy chỉnh
-                new CustomRejectedExecutionHandler()     // Xử lý khi hàng đợi đầy
+                new CustomThreadFactory(),
+                new CustomRejectedExecutionHandler()
         );
-
-        // Cho phép core threads timeout nếu không có việc
         threadPool.allowCoreThreadTimeOut(true);
     }
 
-    // Constructor mặc định
     public Server(int port) {
         this(port, 10, 50, 100);  // core=10, max=50, queue=100
     }
 
-
     public void start() {
         try {
             serverSocket = new ServerSocket(port);
+            port = serverSocket.getLocalPort();
+            publishServerEndpoint();
+
             System.out.println("||=========================================================||");
-            System.out.printf ("|| %-55s ||\n", "The Server is listening at the port: " + port);
+            System.out.printf("|| %-55s ||%n", "The Server is listening at the port: " + port);
             System.out.println("||=========================================================||");
-            System.out.printf ("|| %-55s ||\n", "  - Core Pool Size: " + threadPool.getCorePoolSize());
-            System.out.printf ("|| %-55s ||\n", "  - Maximum Pool Size: " + threadPool.getMaximumPoolSize());
-            System.out.printf ("|| %-55s ||\n", "  - Queue Capacity: " + threadPool.getQueue().remainingCapacity());
-            System.out.printf ("|| %-55s ||\n", "  - Keep Alive Time: 60 seconds");
-            System.out.println("||=========================================================||\n");
+            System.out.printf("|| %-55s ||%n", "  - Core Pool Size: " + threadPool.getCorePoolSize());
+            System.out.printf("|| %-55s ||%n", "  - Maximum Pool Size: " + threadPool.getMaximumPoolSize());
+            System.out.printf("|| %-55s ||%n", "  - Queue Capacity: " + threadPool.getQueue().remainingCapacity());
+            System.out.printf("|| %-55s ||%n", "  - Keep Alive Time: 60 seconds");
+            System.out.println("||=========================================================||");
+            System.out.println();
 
             while (isRunning) {
                 try {
                     Socket clientSocket = serverSocket.accept();
-                    System.out.println("[+] Client connected: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+                    System.out.println("[+] Client connected: "
+                            + clientSocket.getInetAddress().getHostAddress()
+                            + ":" + clientSocket.getPort());
 
-                    // Hiển thị trạng thái pool trước khi xử lý
                     printPoolStatus();
-                    // Gửi task vào ThreadPoolExecutor
-                    threadPool.execute(() -> {
-                        try {
-                            ClientHandler.handleClient(clientSocket);
-                        } catch (Exception e) {
-                            System.err.println("Lỗi xử lý client: " + e.getMessage());
-                        } finally {
-                            try {
-                                clientSocket.close();
-                                System.out.println("[-] Client disconnected: " + clientSocket.getInetAddress().getHostAddress());
-                            } catch (IOException e) {
-                                System.err.println("Lỗi đóng socket: " + e.getMessage());
-                            }
-                        }
-                    });
-
+                    threadPool.execute(() -> handleClient(clientSocket));
                 } catch (IOException e) {
                     if (isRunning) {
-                        System.err.println("Lỗi khi accept client: " + e.getMessage());
+                        System.err.println("Accept error: " + e.getMessage());
                     }
                 }
             }
         } catch (IOException e) {
-            System.err.println("Unable to start Server on port: " + port + ": " + e.getMessage());
+            System.err.println("Unable to start server on port " + port + ": " + e.getMessage());
+        }
+    }
+
+    private void publishServerEndpoint() {
+        try {
+            ServerEndpoint endpoint = new ServerEndpoint(ServerRegistryApi.resolveServerHost(), port);
+            ServerRegistryApi.publishServerEndpoint(endpoint);
+            System.out.println("Published server endpoint to registry: " + endpoint.asAddress());
+        } catch (IOException e) {
+            System.err.println("Unable to publish server endpoint: " + e.getMessage());
+        }
+    }
+
+    private void handleClient(Socket clientSocket) {
+        try {
+            ClientHandler.handleClient(clientSocket);
+        } catch (Exception e) {
+            System.err.println("Client handling error: " + e.getMessage());
+        } finally {
+            try {
+                clientSocket.close();
+                System.out.println("[-] Client disconnected: " + clientSocket.getInetAddress().getHostAddress());
+            } catch (IOException e) {
+                System.err.println("Socket close error: " + e.getMessage());
+            }
         }
     }
 
@@ -98,103 +109,90 @@ public class Server {
         System.out.println("Queue Size: " + threadPool.getQueue().size());
         System.out.println("Completed Tasks: " + threadPool.getCompletedTaskCount());
         System.out.println("Total Tasks: " + threadPool.getTaskCount());
-        System.out.println("==========================\n");
+        System.out.println("==========================");
+        System.out.println();
     }
 
-    // Dừng server an toàn
     public void stop() {
         isRunning = false;
         try {
-            // Đóng ServerSocket
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
 
-            System.out.println("\nĐang dừng server...");
-
-            // Ngừng nhận task mới
+            System.out.println();
+            System.out.println("Stopping server...");
             threadPool.shutdown();
 
-            // Chờ task hiện tại hoàn thành
             if (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
-                System.out.println("Buộc dừng các task đang chạy...");
+                System.out.println("Forcing running tasks to stop...");
                 threadPool.shutdownNow();
 
                 if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
-                    System.err.println("ThreadPool không thể dừng hoàn toàn");
+                    System.err.println("ThreadPool did not stop cleanly");
                 }
             }
 
-            System.out.println("Server đã dừng thành công!");
+            System.out.println("Server stopped successfully");
             System.out.println("Total tasks processed: " + threadPool.getCompletedTaskCount());
-
         } catch (InterruptedException e) {
             threadPool.shutdownNow();
             Thread.currentThread().interrupt();
         } catch (IOException e) {
-            System.err.println("Lỗi khi dừng server: " + e.getMessage());
+            System.err.println("Stop server error: " + e.getMessage());
         }
     }
 
-    // Custom ThreadFactory để đặt tên thread dễ debug
     private static class CustomThreadFactory implements ThreadFactory {
         private final AtomicInteger threadNumber = new AtomicInteger(1);
         private final String namePrefix = "client-handler-";
 
         @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, namePrefix + threadNumber.getAndIncrement());
-            t.setDaemon(false);  // Non-daemon thread
-            t.setPriority(Thread.NORM_PRIORITY);
-            System.out.println("Tạo thread mới: " + t.getName());
-            return t;
+        public Thread newThread(Runnable runnable) {
+            Thread thread = new Thread(runnable, namePrefix + threadNumber.getAndIncrement());
+            thread.setDaemon(false);
+            thread.setPriority(Thread.NORM_PRIORITY);
+            System.out.println("Created thread: " + thread.getName());
+            return thread;
         }
     }
 
-    // Custom RejectedExecutionHandler để xử lý khi hàng đợi đầy
     private static class CustomRejectedExecutionHandler implements RejectedExecutionHandler {
         @Override
-        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-            System.err.println("⚠️ WARNING: Task bị từ chối! Queue đã đầy. " +
-                    "Active threads: " + executor.getActiveCount() +
-                    ", Pool size: " + executor.getPoolSize());
-
-            // Có thể thử lại hoặc ghi log, ở đây in ra warning
+        public void rejectedExecution(Runnable runnable, ThreadPoolExecutor executor) {
+            System.err.println("WARNING: Task rejected. Queue is full. Active threads: "
+                    + executor.getActiveCount() + ", Pool size: " + executor.getPoolSize());
         }
     }
 
-    // Điều chỉnh dynamic pool size (tính năng đặc biệt của ThreadPoolExecutor)
     public void adjustPoolSize(int newCoreSize, int newMaxSize) {
         if (newCoreSize > 0 && newCoreSize <= newMaxSize) {
             threadPool.setCorePoolSize(newCoreSize);
             threadPool.setMaximumPoolSize(newMaxSize);
-            System.out.println("Đã điều chỉnh pool size: Core=" + newCoreSize + ", Max=" + newMaxSize);
+            System.out.println("Adjusted pool size: Core=" + newCoreSize + ", Max=" + newMaxSize);
         }
     }
 
     public static void main(String[] args) {
-        // Khởi tạo server với ThreadPoolExecutor
-        // core=10, max=100, queue=200
-        Server server = new Server(12345, 10, 100, 200);
+        int dynamicPort = Integer.getInteger("geoinfo.server.port", 0);
+        Server server = new Server(dynamicPort, 10, 100, 200);
 
-        // Thêm monitor thread để theo dõi
         Thread monitorThread = new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(30000); // Mỗi 30 giây
+                    Thread.sleep(30000);
                     server.printPoolStatus();
 
-                    // Ví dụ: tự động điều chỉnh pool size theo tải
                     if (server.threadPool.getQueue().size() > 150) {
-                        System.out.println("⚠️ Hàng đợi đang đầy, tăng pool size...");
+                        System.out.println("Queue is filling up, increasing pool size...");
                         server.adjustPoolSize(20, 150);
-                    } else if (server.threadPool.getQueue().size() < 50 &&
-                            server.threadPool.getPoolSize() > 10) {
-                        System.out.println("Giảm pool size để tiết kiệm tài nguyên...");
+                    } else if (server.threadPool.getQueue().size() < 50
+                            && server.threadPool.getPoolSize() > 10) {
+                        System.out.println("Reducing pool size to save resources...");
                         server.adjustPoolSize(10, 100);
                     }
-
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     break;
                 }
             }
@@ -202,45 +200,17 @@ public class Server {
         monitorThread.setDaemon(true);
         monitorThread.start();
 
-        // Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\nNhận tín hiệu tắt server...");
+            System.out.println();
+            System.out.println("Shutdown signal received");
             server.stop();
         }));
 
-        // Khởi động server
         server.start();
     }
-}
 
-//package geoinfo.server;
-//
-//import geoinfo.server.handler.ClientHandler;
-//import java.io.IOException;
-//import java.net.ServerSocket;
-//import java.net.Socket;
-//
-//public class Server {
-//    private int port;
-//
-//    public Server(int port) {
-//        this.port = port;
-//    }
-//
-//    public void start() {
-//        try(ServerSocket server = new ServerSocket(port)){
-//            System.out.println("Server đang lắng nghe tại port " + port);
-//            while (true) {
-//                Socket socket = server.accept();
-//                ClientHandler.handleClient(socket);
-//            }
-//        } catch (IOException e) {
-//            System.out.println("Lỗi khởi tạo " + e.getMessage());
-//        }
-//    }
-//
-//    public static void main(String[] args) {
-//        Server server = new Server(12345);
-//        server.start();
-//    }
-//}
+    public static void retoolServer(int port) throws IOException {
+        ServerEndpoint endpoint = new ServerEndpoint(ServerRegistryApi.resolveServerHost(), port);
+        ServerRegistryApi.publishServerEndpoint(endpoint);
+    }
+}
