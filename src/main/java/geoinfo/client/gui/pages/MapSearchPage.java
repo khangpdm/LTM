@@ -66,9 +66,10 @@ public class MapSearchPage extends BorderPane {
             });
             svgPath.setOnMouseClicked(event -> {
                 event.consume();
-                showCountryPopup(nameCountry);
+                if (event.getButton() == javafx.scene.input.MouseButton.SECONDARY) {
+                    showCountryPopup(nameCountry);
+                }
             });
-
             mapGroup.getChildren().add(svgPath);
         }
         return mapGroup;
@@ -80,45 +81,63 @@ public class MapSearchPage extends BorderPane {
 
         container.setOnScroll(event -> {
             double zoomFactor = event.getDeltaY() > 0 ? 1.1 : 0.9;
-            double newScale = content.getScaleX() * zoomFactor;
+            double oldScale = content.getScaleX();
+            double newScale = oldScale * zoomFactor;
 
-            if (newScale >= 0.5 && newScale <= 10.0) {
+            if (newScale >= 0.7 && newScale <= 80.0) {
                 content.setScaleX(newScale);
                 content.setScaleY(newScale);
+
+                if (zoomFactor < 1.0) {
+                    var bounds = content.getBoundsInParent();
+                    double limitX = bounds.getWidth() / 2;
+                    double limitY = bounds.getHeight() / 2;
+
+                    if (Math.abs(content.getTranslateX()) > limitX) {
+                        content.setTranslateX(Math.signum(content.getTranslateX()) * limitX);
+                    }
+                    if (Math.abs(content.getTranslateY()) > limitY) {
+                        content.setTranslateY(Math.signum(content.getTranslateY()) * limitY);
+                    }
+                }
             }
             event.consume();
         });
 
         container.setOnMousePressed(event -> {
-            mouseAnchor[0] = event.getSceneX();
-            mouseAnchor[1] = event.getSceneY();
-            translateAnchor[0] = content.getTranslateX();
-            translateAnchor[1] = content.getTranslateY();
+            if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+                mouseAnchor[0] = event.getSceneX();
+                mouseAnchor[1] = event.getSceneY();
+                translateAnchor[0] = content.getTranslateX();
+                translateAnchor[1] = content.getTranslateY();
+            }
         });
 
         container.setOnMouseDragged(event -> {
-            double deltaX = event.getSceneX() - mouseAnchor[0];
-            double deltaY = event.getSceneY() - mouseAnchor[1];
+            if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+                double deltaX = event.getSceneX() - mouseAnchor[0];
+                double deltaY = event.getSceneY() - mouseAnchor[1];
 
-            double newTranslateX = translateAnchor[0] + deltaX;
-            double newTranslateY = translateAnchor[1] + deltaY;
+                double newTranslateX = translateAnchor[0] + deltaX;
+                double newTranslateY = translateAnchor[1] + deltaY;
 
-            var bounds = content.getBoundsInParent();
-            double mapWidth = bounds.getWidth();
-            double mapHeight = bounds.getHeight();
+                var bounds = content.getBoundsInParent();
+                double mapWidth = bounds.getWidth();
+                double mapHeight = bounds.getHeight();
 
-            double limitX = mapWidth / 2;
-            double limitY = mapHeight / 2;
+                double limitX = mapWidth / 2;
+                double limitY = mapHeight / 2;
 
-            if (Math.abs(newTranslateX) > limitX) {
-                newTranslateX = Math.signum(newTranslateX) * limitX;
+                if (Math.abs(newTranslateX) > limitX) {
+                    newTranslateX = Math.signum(newTranslateX) * limitX;
+                }
+                if (Math.abs(newTranslateY) > limitY) {
+                    newTranslateY = Math.signum(newTranslateY) * limitY;
+                }
+
+                content.setTranslateX(newTranslateX);
+                content.setTranslateY(newTranslateY);
             }
-            if (Math.abs(newTranslateY) > limitY) {
-                newTranslateY = Math.signum(newTranslateY) * limitY;
-            }
-
-            content.setTranslateX(newTranslateX);
-            content.setTranslateY(newTranslateY);
         });
     }
 
@@ -139,7 +158,7 @@ public class MapSearchPage extends BorderPane {
             mapTooltip.setVisible(false);
 
         } catch (Exception e) {
-            System.err.println("Loi load map: " + e.getMessage());
+            System.err.println("Error load map: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -148,6 +167,7 @@ public class MapSearchPage extends BorderPane {
         mapContainer = new Pane();
         mapContainer.getChildren().add(map);
         mapContainer.getChildren().add(mapTooltip);
+        mapContainer.setStyle("-fx-background-color: #2196F3;");
 
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(mapContainer.widthProperty());
@@ -169,18 +189,18 @@ public class MapSearchPage extends BorderPane {
         Label title = new Label(countryName);
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-//        SearchResultPane resultPane = searchEnginePage.createResultPane();
-//        resultPane.setText("Dang tim kiem quoc gia...");
+        SearchResultPane resultPane = searchEnginePage.createResultPane();
+        resultPane.setText("Searching...");
 
         BorderPane root = new BorderPane();
         root.setTop(title);
-//        root.setCenter(resultPane);
+        root.setCenter(resultPane);
         root.setPadding(new Insets(16));
         BorderPane.setMargin(title, new Insets(0, 0, 12, 0));
 
         popup.setScene(new Scene(root, 760, 560));
         popup.show();
 
-//        resultPane.search("country:" + countryName, "Dang tim kiem quoc gia...");
+        resultPane.search("country:" + countryName, "Searching...");
     }
 }

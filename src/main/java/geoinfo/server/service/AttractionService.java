@@ -165,7 +165,7 @@ public class AttractionService {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Nhap ma quoc gia: ");
+        System.out.print("Enter the country code: ");
         String input = scanner.nextLine();
         System.out.println(getAttractionInfo(input));
         scanner.close();

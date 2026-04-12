@@ -1,4 +1,5 @@
 geoinfo\server\processor\DataProcessor.class
+geoinfo\client\gui\components\SearchResultPane.class
 geoinfo\server\service\CityService.class
 geoinfo\client\gui\pages\SearchEnginePage.class
 geoinfo\client\network\ClientService.class
@@ -16,3 +17,4 @@ geoinfo\server\service\AttractionService.class
 geoinfo\server\service\HotelServiceLimit.class
 geoinfo\client\gui\utils\Configure.class
 geoinfo\server\Server.class
+geoinfo\client\gui\components\SearchResultPane$SearchThreadFactory.class

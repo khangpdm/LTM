@@ -55,9 +55,9 @@ public class ClientService {
             }
             return response.toString();
         } catch (SocketTimeoutException e) {
-            return "Loi: Server khong phan hoi (timeout)";
+            return "Error: Server not response (timeout)";
         } catch (IOException e) {
-            return "Loi: " + e.getMessage();
+            return "Error: " + e.getMessage();
         }
     }
 

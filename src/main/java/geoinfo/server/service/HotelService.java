@@ -13,7 +13,8 @@ import java.util.Scanner;
 
 public class HotelService {
 
-    private static final String API_KEY = "a7c2d91ec1msh146f0a8ec35cc8dp11944bjsn982b0aad2229";
+    //private static final String API_KEY = "a7c2d91ec1msh146f0a8ec35cc8dp11944bjsn982b0aad2229";
+    private static final String API_KEY = "a968ffde8dmshc5924334016a795p178ea7jsn153760f2cd40";
     private static final String API_HOST = "booking-com.p.rapidapi.com";
     private static final String BASE_URL = "https://booking-com.p.rapidapi.com/v1/hotels";
     private static final Map<String, String> API_HEADERS = Map.of(
@@ -415,7 +416,7 @@ public class HotelService {
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        System.out.print("Nhap thanh pho: ");
+        System.out.print("City name: ");
         String city = sc.nextLine();
         System.out.println(getHotelsByCity(city));
     }

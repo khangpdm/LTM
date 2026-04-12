@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 public class ClientHandler {
     public static void handleClient(Socket socket) {
-        System.out.println("Server da nhan ket noi tu Client UI: " + socket.getRemoteSocketAddress());
+        System.out.println("Server received connection from Client UI: " + socket.getRemoteSocketAddress());
 
         try (
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
@@ -23,8 +23,8 @@ public class ClientHandler {
             while ((dataFromClient = reader.readLine()) != null) {
                 if (dataFromClient.trim().equalsIgnoreCase("bye")) {
                     writer.println(new JSONObject()
-                            .put("status", "success")
-                            .put("message", "Ket thuc ket noi. Tam biet!")
+                            .put("status", "Success")
+                            .put("message", "End of connection, goodbye!")
                             .toString(2));
                     writer.println("<END>");
                     break;
@@ -35,7 +35,7 @@ public class ClientHandler {
                 writer.println("<END>");
             }
         } catch (IOException e) {
-            System.out.println("Mat ket noi voi Client: " + e.getMessage());
+            System.out.println("Disconnected Client: " + e.getMessage());
         }
     }
 }
