@@ -1,5 +1,8 @@
 package geoinfo.client.network;
 
+import geoinfo.common.SecurityConfig;
+import geoinfo.common.SecurityUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -41,8 +44,13 @@ public class ClientService {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)
         ) {
+            byte[] sessionKey = SecurityUtils.generateAESKey();
+            String encryptedKey = SecurityUtils.encryptRSA(sessionKey, SecurityConfig.getPublicKey());
+            writer.println(encryptedKey); // gui khoa ma hoa
+            writer.println(SecurityUtils.encryptAES(message, sessionKey));
+
             socket.setSoTimeout(100000);
-            writer.println(message);
+//            writer.println(message);
             writer.flush();
 
             StringBuilder response = new StringBuilder();
@@ -51,13 +59,13 @@ public class ClientService {
                 if (line.equals("<END>")) {
                     break;
                 }
-                response.append(line).append("\n");
+                response.append(SecurityUtils.decryptAES(line, sessionKey)).append("\n");
             }
             return response.toString();
         } catch (SocketTimeoutException e) {
             return "Error: Server not response (timeout)";
-        } catch (IOException e) {
-            return "Error: " + e.getMessage();
+        } catch (Exception e) {
+            return "Encryption error: " + e.getMessage();
         }
     }
 
