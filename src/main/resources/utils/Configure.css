@@ -108,3 +108,128 @@
     -fx-underline: true;
     -fx-cursor: hand;
 }
+
+/* CityAndCountryComponent */
+.cc-container {
+    -fx-background-color: white;
+    -fx-border-color: #00AEEF;
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-background-radius: 22;
+    -fx-padding: 20 25 20 25;
+}
+
+.cc-card {
+    -fx-background-color: white;
+    -fx-border-color: #00AEEF;
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-background-radius: 22;
+    -fx-transition: all 0.3s ease;
+}
+
+.cc-card:hover {
+    -fx-border-color: #00AEEF;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);
+}
+
+.cc-card-title {
+    -fx-text-fill: #00AEEF;
+    -fx-font-weight: 800;
+    -fx-font-size: 20px;
+    -fx-font-family: "Arial Narrow";
+}
+
+.cc-card-value {
+    -fx-text-fill: #6b7280;
+    -fx-font-size: 16px;
+    -fx-font-family: "Arial Narrow";
+}
+
+.cc-card-link {
+    -fx-text-fill: #2563eb;
+    -fx-font-size: 16px;
+    -fx-underline: true;
+    -fx-font-family: "Arial Narrow";
+    -fx-padding: 0;
+}
+
+/* AttractionAndHotelComponent */
+.ah-card {
+    -fx-background-color: white;
+    -fx-border-color: #00AEEF;
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-background-radius: 22;
+    -fx-padding: 25;
+}
+
+.ah-reviews-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4b5563;
+}
+
+.ah-review-card {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+    -fx-padding: 12;
+}
+
+.ah-key {
+    -fx-text-fill: #00AEEF;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+.ah-value {
+    -fx-text-fill: #374151;
+    -fx-font-size: 14px;
+}
+
+.ah-review-key {
+    -fx-text-fill: #00AEEF;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.ah-review-value {
+    -fx-text-fill: #374151;
+    -fx-font-size: 12px;
+}
+
+.ah-link {
+    -fx-text-fill: #2563eb;
+    -fx-underline: true;
+    -fx-cursor: hand;
+}
+
+/*NewsComponent*/
+.news-card {
+    -fx-background-color: white;
+    -fx-border-color: #00AEEF;
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-background-radius: 22;
+    -fx-padding: 10 25 10 25;
+}
+
+.news-card-key {
+    -fx-text-fill: #00AEEF;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+.news-card-value {
+    -fx-text-fill: #374151;
+    -fx-font-size: 14px;
+}
+
+.news-card-link {
+    -fx-text-fill: #2563eb;
+    -fx-underline: true;
+    -fx-cursor: hand;
+}

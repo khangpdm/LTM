@@ -9,6 +9,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -24,8 +25,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SearchResultPane extends VBox {
-    private static final ExecutorService SEARCH_EXECUTOR =
-            Executors.newCachedThreadPool(new SearchThreadFactory());
+    private static final ExecutorService SEARCH_EXECUTOR = Executors.newCachedThreadPool(new SearchThreadFactory());
 
     private final AtomicLong latestRequestId = new AtomicLong();
     private final ClientService clientService;
@@ -41,16 +41,16 @@ public class SearchResultPane extends VBox {
 
     private JSONObject cachedMoreInfo;
     private boolean isLoadingMoreInfo;
-
     private JSONObject cachedHotels;
     private boolean isLoadingHotels;
 
+    // 1. CONSTRUCTOR KHỞI TẠO ĐỐI TƯỢNG CHÍNH
     public SearchResultPane(ClientService clientService) {
         this.clientService = clientService;
         initComponent();
         buildLayout();
     }
-
+    // 1.1. Khởi tạo tất cả các thành phần GUI
     private void initComponent(){
         flagPreview = new ImageView();
         flagPreview.setFitHeight(36);
@@ -81,7 +81,7 @@ public class SearchResultPane extends VBox {
         resultScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         resultScrollPane.setStyle("-fx-background: white; -fx-background-color: white;");
     }
-
+    // 1.2. Sắp xếp bố cục các thành phần
     private void buildLayout() {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -96,16 +96,19 @@ public class SearchResultPane extends VBox {
         this.setFillWidth(true);
     }
 
+    // 2. HIỂN THỊ MỘT THÔNG BÁO VĂN BẢN
     public void setText(String text) {
         clearSupplementaryUi();
         showMessage(text);
     }
 
+    // 3. XÓA TOÀN BỘ NỘI DUNG TRONG RESULTCONTAINER VÀ CÁC THÀNH PHẦN PHỤ TRỢ
     public void clear() {
         clearSupplementaryUi();
         resultContainer.getChildren().clear();
     }
 
+    // 4. GỬI REQUEST TÌM KIẾM LÊN SERVER BẤT ĐỒNG BỘ, HIỂN THỊ MESSAGE LOADING, SAU ĐÓ RENDER KẾT QUẢ TRẢ VỀ
     public void search(String request, String loadingMessage) {
         long requestId = latestRequestId.incrementAndGet();
         pendingMoreInfoRequest = null;
@@ -131,14 +134,11 @@ public class SearchResultPane extends VBox {
         });
     }
 
+    // 5. TẢI THÊM THÔNG TIN CHI TIẾT (MORE INFO) TỪ SERVER KHI NGƯỜI DÙNG NHẤN NÚT (CÓ HỖ TRỢ CACHE)
     private void fetchMoreInfo() {
         String request = pendingMoreInfoRequest;
-        if (request == null || request.isBlank()) {
-            return;
-        }
-        if (request.equals(loadedMoreInfoRequest)) {
-            return;
-        }
+        if (request == null || request.isBlank()) { return; }
+        if (request.equals(loadedMoreInfoRequest)) { return; }
 
         // === THÊM: Dùng cache nếu đã có ===
         if (cachedMoreInfo != null) {
@@ -195,6 +195,7 @@ public class SearchResultPane extends VBox {
         });
     }
 
+    // 6. PHÂN TÍCH JSON RESPONSE TỪ SERVER VÀ HIỂN THỊ LÊN GIAO DIỆN Ở CHẾ ĐỘ GHI ĐÈ
     private void renderResponse(String response, boolean appendMode) {
         try {
             JSONObject json = new JSONObject(response);
@@ -223,7 +224,7 @@ public class SearchResultPane extends VBox {
             }
         }
     }
-
+    // 6.1. Cập nhật phần header gồm flag, tiêu đề và nút "See More Information"
     private void applyHeader(JSONObject json) {
         String flagUrl = json.optString("flagUrl", "").trim();
         if (flagUrl.isBlank()) {
@@ -266,7 +267,7 @@ public class SearchResultPane extends VBox {
             }
         }
     }
-
+    // 6.1.1. Tải trước dữ liệu "more info" trong background và lưu vào cachedMoreInfo
     private void prefetchMoreInfo(String request) {
         if (request == null || request.isBlank()) {
             return;
@@ -293,11 +294,19 @@ public class SearchResultPane extends VBox {
                 if (requestId == latestRequestId.get()) {
                     cachedMoreInfo = finalResult;
                     isLoadingMoreInfo = false;
+
+                    // Tự động append hotels khi load xong
+                    if (cachedMoreInfo != null) {
+                        JSONArray hotels = cachedMoreInfo.optJSONArray("hotels");
+                        if (hotels != null && !hotels.isEmpty()) {
+                            addHotelSection("Hotels", hotels);
+                        }
+                    }
                 }
             });
         });
     }
-
+    //6.2.2. Tải trước dữ liệu khách sạn trong background, lưu vào cachedHotels và tự động append khi load xong
     private void prefetchHotels(String request) {
         if (request == null || request.isBlank()) {
             return;
@@ -319,7 +328,7 @@ public class SearchResultPane extends VBox {
             }
 
             JSONObject finalResult = result;
-            Platform.runLater(() -> {
+            Platform.runLater(() -> {  // ← ĐẢM BẢO CHẠY TRÊN FX THREAD
                 if (requestId == latestRequestId.get()) {
                     cachedHotels = finalResult;
                     isLoadingHotels = false;
@@ -328,31 +337,92 @@ public class SearchResultPane extends VBox {
                     if (cachedHotels != null) {
                         JSONArray hotels = cachedHotels.optJSONArray("hotels");
                         if (hotels != null && !hotels.isEmpty()) {
-                            addHotelSection("Hotels", hotels);
+                            addHotelSection("Hotels", hotels);  // ← GIỜ AN TOÀN
                         }
                     }
                 }
             });
         });
     }
-
+    // 6.2. Hiển thị toàn bộ nội dung chính của JSON dưới dạng các bảng hoặc component đặc biệt.
     private void showJsonAsTables(JSONObject json) {
         resultContainer.getChildren().clear();
 
-        MTable infoTable = createInfoTable(json);
-        if (infoTable != null) {
-            resultContainer.getChildren().add(infoTable);
+        Node infoNode = createTopInfoNode(json);
+        if (infoNode != null) {
+            resultContainer.getChildren().add(infoNode);
         }
 
-        addArraySection("News", json.optJSONArray("news"));
+        addNewsSection("News", json.optJSONArray("news"));
         addHotelSection("Hotels", json.optJSONArray("hotels"));
-        addArraySection("Attractions", json.optJSONArray("attractions"));
+        addAttractionSection("Attractions", json.optJSONArray("attractions"));
     }
-
+    // 6.2.1. Tạo component hiển thị thông tin tổng quan cho city hoặc country
+    private Node createTopInfoNode(JSONObject json) {
+        String type = json.optString("type", "").trim();
+        if ("city".equalsIgnoreCase(type) || "country".equalsIgnoreCase(type)) {
+            CityAndCountryComponent component = new CityAndCountryComponent();
+            component.setItems(buildCardItems(json, type));
+            return component;
+        }
+        return null;
+    }
+    // 6.2.2. Thêm section tin tức (News) vào resultContainer (nếu cần)
+    private void addNewsSection(String title, JSONArray array) {
+        if (array == null || array.isEmpty()) {
+            return;
+        }
+        Label sectionLabel = createSectionLabel(title);
+        resultContainer.getChildren().add(sectionLabel);
+        VBox newsContainer = new VBox(20);
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.optJSONObject(i);
+            if (item == null) continue;
+            newsContainer.getChildren().add(new NewsComponent(item));
+        }
+        if (!newsContainer.getChildren().isEmpty()) {
+            resultContainer.getChildren().add(newsContainer);
+        }
+    }
+    // 6.2.3. Thêm section điểm tham quan (Attraction) vào resultContainer (nếu cần)
+    private void addAttractionSection(String title, JSONArray array) {
+        if (array == null || array.isEmpty()) {
+            return;
+        }
+        Label sectionLabel = createSectionLabel(title);
+        resultContainer.getChildren().add(sectionLabel);
+        VBox sectionBox = new VBox(20);
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.optJSONObject(i);
+            if (item == null) continue;
+            sectionBox.getChildren().add(AttractionAndHotelComponent.forAttraction(item));
+        }
+        if (!sectionBox.getChildren().isEmpty()) {
+            resultContainer.getChildren().add(sectionBox);
+        }
+    }
+    // 6.2.4. Thêm section khách sạn (Hotel) vào resultContainer (nếu cần)
+    private void addHotelSection(String title, JSONArray array) {
+        if (array == null || array.isEmpty()) {
+            return;
+        }
+        Label sectionLabel = createSectionLabel(title);
+        resultContainer.getChildren().add(sectionLabel);
+        VBox sectionBox = new VBox(20);
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.optJSONObject(i);
+            if (item == null) continue;
+            sectionBox.getChildren().add(AttractionAndHotelComponent.forHotel(item));
+        }
+        if (!sectionBox.getChildren().isEmpty()) {
+            resultContainer.getChildren().add(sectionBox);
+        }
+    }
+    // 6.3. Nối thêm các section News, Hotels, Attractions vào resultContainer (dùng cho chế độ appendMode)
     private void appendAdditionalSections(JSONObject json) {
-        addArraySection("News", json.optJSONArray("news"));
+        addNewsSection("News", json.optJSONArray("news"));
         addHotelSection("Hotels", json.optJSONArray("hotels"));
-        addArraySection("Attractions", json.optJSONArray("attractions"));
+        addAttractionSection("Attractions", json.optJSONArray("attractions"));
 
         String message = json.optString("message", "").trim();
         if (!message.isBlank()) {
@@ -360,133 +430,87 @@ public class SearchResultPane extends VBox {
         }
     }
 
-    private MTable createInfoTable(JSONObject json) {
-        List<MTable.RowData> rows = new ArrayList<>();
-        for (String key : json.keySet()) {
+    // 7. CÁC HÀM PHỤ TRỢ KHÁC
+    private Node createImagePreview(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        String trimmed = url.trim();
+        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            return null;
+        }
+
+        ImageView view = new ImageView(new Image(trimmed, true));
+        view.setPreserveRatio(true);
+        view.setSmooth(true);
+        view.setFitHeight(220);
+
+        VBox wrapper = new VBox(view);
+        wrapper.setFillWidth(true);
+        wrapper.setPadding(new Insets(6, 0, 6, 0));
+        view.fitWidthProperty().bind(wrapper.widthProperty());
+        return wrapper;
+    }
+
+    private List<CityAndCountryComponent.Item> buildCardItems(JSONObject json, String type) {
+        List<String> preferredOrder = new ArrayList<>();
+        if ("country".equalsIgnoreCase(type)) {
+            preferredOrder.add("neighboringCountries");
+            preferredOrder.add("currentWeather");
+            preferredOrder.add("languages");
+            preferredOrder.add("coordinates");
+            preferredOrder.add("population");
+            preferredOrder.add("currencies");
+        } else if ("city".equalsIgnoreCase(type)) {
+            // Backward compatibility: older server responses may still return latitude/longitude instead of coordinates.
+            if (!json.has("coordinates")) {
+                double lat = json.optDouble("latitude", Double.NaN);
+                double lon = json.optDouble("longitude", Double.NaN);
+                if (!Double.isNaN(lat) && !Double.isNaN(lon)) {
+                    json.put("coordinates", new JSONArray().put(lon).put(lat));
+                }
+            }
+
+            preferredOrder.add("country");
+            preferredOrder.add("population");
+            preferredOrder.add("coordinates");
+            preferredOrder.add("localTime");
+            preferredOrder.add("temperatureCelsius");
+            preferredOrder.add("weatherCondition");
+            preferredOrder.add("humidity");
+            preferredOrder.add("windKph");
+        }
+
+        List<String> keys = new ArrayList<>(json.keySet());
+        keys.sort(String::compareToIgnoreCase);
+
+        List<CityAndCountryComponent.Item> items = new ArrayList<>();
+
+        for (String key : preferredOrder) {
+            if (!json.has(key) || shouldSkipKey(key)) {
+                continue;
+            }
+            items.add(new CityAndCountryComponent.Item(formatKey(key), stringify(json.opt(key))));
+            keys.removeIf(k -> k.equals(key));
+        }
+
+        for (String key : keys) {
             if (shouldSkipKey(key)) {
                 continue;
             }
-            rows.add(new MTable.RowData(formatKey(key), stringify(json.opt(key))));
+            items.add(new CityAndCountryComponent.Item(formatKey(key), stringify(json.opt(key))));
         }
 
-        if (rows.isEmpty()) {
-            return null;
-        }
-
-        MTable table = new MTable();
-        table.setRows(rows);
-        return table;
-    }
-
-    private void addArraySection(String title, JSONArray array) {
-        if (array == null || array.isEmpty()) {
-            return;
-        }
-
-        Label sectionLabel = createSectionLabel(title);
-        resultContainer.getChildren().add(sectionLabel);
-
-        VBox sectionBox = new VBox(10);
-        for (int i = 0; i < array.length(); i++) {
-            JSONObject item = array.optJSONObject(i);
-            if (item == null) {
-                continue;
-            }
-
-            if (array.length() > 1) {
-                Label itemLabel = new Label(title + " " + (i + 1));
-                itemLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1f2937; ");
-                sectionBox.getChildren().add(itemLabel);
-            }
-
-            MTable itemTable = createInfoTable(item);
-            if (itemTable != null) {
-                sectionBox.getChildren().add(itemTable);
-            }
-        }
-
-        if (!sectionBox.getChildren().isEmpty()) {
-            resultContainer.getChildren().add(sectionBox);
-        }
-    }
-
-    private void addHotelSection(String title, JSONArray array) {
-        if (array == null || array.isEmpty()) {
-            return;
-        }
-
-        Label sectionLabel = createSectionLabel(title);
-        resultContainer.getChildren().add(sectionLabel);
-
-        VBox sectionBox = new VBox(10);
-        for (int i = 0; i < array.length(); i++) {
-            JSONObject hotel = array.optJSONObject(i);
-            if (hotel == null) {
-                continue;
-            }
-
-            Label itemLabel = new Label("Hotel " + (i + 1));
-            itemLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1f2937;");
-            sectionBox.getChildren().add(itemLabel);
-
-            MTable hotelTable = createInfoTableExcluding(hotel, List.of("reviews"));
-            if (hotelTable != null) {
-                sectionBox.getChildren().add(hotelTable);
-            }
-
-            JSONArray reviews = hotel.optJSONArray("reviews");
-            if (reviews == null || reviews.isEmpty()) {
-                continue;
-            }
-
-            Label reviewLabel = new Label("Reviews");
-            reviewLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #4b5563;");
-            sectionBox.getChildren().add(reviewLabel);
-
-            VBox reviewBox = new VBox(8);
-            for (int reviewIndex = 0; reviewIndex < reviews.length(); reviewIndex++) {
-                JSONObject review = reviews.optJSONObject(reviewIndex);
-                if (review == null) {
-                    continue;
-                }
-
-                MTable reviewTable = createInfoTable(review);
-                if (reviewTable != null) {
-                    reviewBox.getChildren().add(reviewTable);
-                }
-            }
-            if (!reviewBox.getChildren().isEmpty()) {
-                sectionBox.getChildren().add(reviewBox);
-            }
-        }
-
-        if (!sectionBox.getChildren().isEmpty()) {
-            resultContainer.getChildren().add(sectionBox);
-        }
-    }
-
-    private MTable createInfoTableExcluding(JSONObject json, List<String> excludedKeys) {
-        List<MTable.RowData> rows = new ArrayList<>();
-        for (String key : json.keySet()) {
-            if (shouldSkipKey(key) || excludedKeys.contains(key)) {
-                continue;
-            }
-            rows.add(new MTable.RowData(formatKey(key), stringify(json.opt(key))));
-        }
-
-        if (rows.isEmpty()) {
-            return null;
-        }
-
-        MTable table = new MTable();
-        table.setRows(rows);
-        return table;
+        return items;
     }
 
     private boolean shouldSkipKey(String key) {
         return "status".equals(key)
                 || "type".equals(key)
                 || "name".equals(key)
+                || "region".equals(key)
+                || "latitude".equals(key)
+                || "longitude".equals(key)
                 || "news".equals(key)
                 || "hotels".equals(key)
                 || "attractions".equals(key)

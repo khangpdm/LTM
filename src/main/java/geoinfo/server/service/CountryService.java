@@ -13,11 +13,9 @@ import java.text.Normalizer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 public class CountryService {
-    private static final String ALL_COUNTRIES_URL =
-            "https://restcountries.com/v3.1/all?fields=name,capital,altSpellings,cca2,cca3,latlng,population,currencies,languages,borders";
+    private static final String ALL_COUNTRIES_URL = "https://restcountries.com/v3.1/all?fields=name,capital,altSpellings,cca2,cca3,latlng,population,currencies,languages,borders";
     private static final String FLAG_URL_TEMPLATE = "https://flagcdn.com/w320/%s.png";
     private static final String COUNTRY_ALIAS_RESOURCE = "/data/vietsub.csv";
 
@@ -411,20 +409,5 @@ public class CountryService {
         } catch (Exception e) {
             return new JSONArray();
         }
-    }
-
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        String input = "";
-
-        while (!input.equalsIgnoreCase("exit")) {
-            System.out.print("Country name: ");
-            input = scanner.nextLine();
-
-            if (!input.equalsIgnoreCase("exit")) {
-                System.out.println(getCountryInfo(input));
-            }
-        }
-        scanner.close();
     }
 }

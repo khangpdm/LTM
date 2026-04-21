@@ -6,14 +6,20 @@ import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URLEncoder;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
 
 public class AttractionService {
 
     private static final String GEONAMES_USERNAME = "tinmi2005";
     private static final int MAX_ROWS = 3;
+
+    private static final String GEONAMES_SEARCH_API_URL = "http://api.geonames.org/searchJSON";
+    private static final String GEONAMES_GET_API_URL = "http://api.geonames.org/getJSON";
+    private static final String HTTPS_PREFIX = "https://";
+    private static final String WIKIPEDIA_REST_SUMMARY_PATH = "/api/rest_v1/page/summary/";
 
     public static String getAttractionInfo(String input) {
         JSONObject response = new JSONObject()
@@ -29,7 +35,7 @@ public class AttractionService {
         }
 
         String countryCode = input.trim().toUpperCase();
-        String url = "http://api.geonames.org/searchJSON?country="
+        String url = GEONAMES_SEARCH_API_URL + "?country="
                 + URLEncoder.encode(countryCode, StandardCharsets.UTF_8)
                 + "&featureClass=T"
                 + "&maxRows=" + MAX_ROWS
@@ -79,7 +85,7 @@ public class AttractionService {
     }
 
     private static JSONObject getAttractionDetail(int geonameId) throws IOException {
-        String detailUrl = "http://api.geonames.org/getJSON?geonameId="
+        String detailUrl = GEONAMES_GET_API_URL + "?geonameId="
                 + geonameId
                 + "&username=" + GEONAMES_USERNAME;
 
@@ -90,38 +96,92 @@ public class AttractionService {
     private static JSONObject buildAttractionItem(JSONObject detail) {
         String name = detail.optString("name", "Unknown");
         String asciiName = detail.optString("asciiName", "");
-        String adminName1 = detail.optString("adminName1", "");
-        String adminName2 = detail.optString("adminName2", "");
-        String countryName = detail.optString("countryName", "");
         String featureName = detail.optString("fcodeName", "");
-        String lat = detail.optString("lat", "");
-        String lng = detail.optString("lng", "");
+        double lat = detail.optDouble("lat", Double.NaN);
+        double lng = detail.optDouble("lng", Double.NaN);
         String wikipediaUrl = detail.optString("wikipediaURL", "");
+        String thumbnailImg = detail.optString("thumbnailImg", "");
+        String imageUrl = thumbnailImg == null ? "" : thumbnailImg.trim();
+        if (imageUrl.isBlank()) {
+            imageUrl = fetchWikipediaThumbnail(wikipediaUrl);
+        }
         String alternateNames = buildAlternateNames(detail.optJSONArray("alternateNames"));
 
-        return new JSONObject()
+        JSONObject result = new JSONObject()
                 .put("name", name)
                 .put("asciiName", asciiName)
                 .put("featureType", featureName)
-                .put("region", buildRegion(adminName2, adminName1, countryName))
                 .put("coordinates", buildCoordinates(lat, lng))
-                .put("wikipediaUrl", wikipediaUrl.isBlank() ? "" : "https://" + wikipediaUrl)
+                .put("imageUrl", imageUrl)
+                .put("wikipediaUrl", wikipediaUrl.isBlank() ? "" : HTTPS_PREFIX + wikipediaUrl)
                 .put("alternateNames", alternateNames);
+
+        if (imageUrl.isBlank()) {
+            result.remove("imageUrl");
+        }
+
+        return result;
     }
 
-    private static String buildRegion(String adminName2, String adminName1, String countryName) {
-        StringBuilder region = new StringBuilder();
-        appendPart(region, adminName2);
-        appendPart(region, adminName1);
-        appendPart(region, countryName);
-        return region.toString();
-    }
+    private static String fetchWikipediaThumbnail(String wikipediaUrl) {
+        try {
+            if (wikipediaUrl == null || wikipediaUrl.isBlank()) {
+                return "";
+            }
 
-    private static String buildCoordinates(String lat, String lng) {
-        if (lat == null || lat.isBlank() || lng == null || lng.isBlank()) {
+            String fullUrl = wikipediaUrl.startsWith("http") ? wikipediaUrl.trim() : (HTTPS_PREFIX + wikipediaUrl.trim());
+            URI uri = URI.create(fullUrl);
+            String host = uri.getHost();
+            String path = uri.getPath();
+            if (host == null || host.isBlank() || path == null || !path.contains("/wiki/")) {
+                return "";
+            }
+
+            String title = path.substring(path.indexOf("/wiki/") + "/wiki/".length());
+            if (title.isBlank()) {
+                return "";
+            }
+
+            // Title is usually URL-encoded already; decode once, then encode as a path segment.
+            title = URLDecoder.decode(title, StandardCharsets.UTF_8);
+            String encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8).replace("+", "%20");
+
+            String summaryUrl = HTTPS_PREFIX + host + WIKIPEDIA_REST_SUMMARY_PATH + encodedTitle;
+            Document doc = ApiConnector.get(summaryUrl);
+            if (doc == null) {
+                return "";
+            }
+
+            String body = doc.text();
+            if (body == null || body.isBlank()) {
+                return "";
+            }
+
+            JSONObject json = new JSONObject(body);
+            JSONObject thumbnail = json.optJSONObject("thumbnail");
+            if (thumbnail != null) {
+                String src = thumbnail.optString("source", "").trim();
+                if (!src.isBlank()) {
+                    return src;
+                }
+            }
+
+            JSONObject original = json.optJSONObject("originalimage");
+            if (original != null) {
+                return original.optString("source", "").trim();
+            }
+
+            return "";
+        } catch (Exception e) {
             return "";
         }
-        return lat + ", " + lng;
+    }
+
+    private static Object buildCoordinates(double lat, double lng) {
+        if (Double.isNaN(lat) || Double.isNaN(lng)) {
+            return "";
+        }
+        return new JSONArray().put(lng).put(lat);
     }
 
     private static String buildAlternateNames(JSONArray alternateNames) {
@@ -153,21 +213,4 @@ public class AttractionService {
         return result.toString();
     }
 
-    private static void appendPart(StringBuilder builder, String value) {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-        if (!builder.isEmpty()) {
-            builder.append(", ");
-        }
-        builder.append(value.trim());
-    }
-
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter the country code: ");
-        String input = scanner.nextLine();
-        System.out.println(getAttractionInfo(input));
-        scanner.close();
-    }
 }

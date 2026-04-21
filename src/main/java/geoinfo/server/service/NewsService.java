@@ -13,6 +13,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 public class NewsService {
+    private static final String GOOGLE_NEWS_RSS_SEARCH_URL = "https://news.google.com/rss/search";
 
     public static String getNewsInfo(String input) {
         JSONObject response = new JSONObject()
@@ -23,7 +24,9 @@ public class NewsService {
 
         try {
             String encoded = URLEncoder.encode(input == null ? "" : input, StandardCharsets.UTF_8);
-            String rssUrl = "https://news.google.com/rss/search?q=" + encoded + "&hl=en-US&gl=US&ceid=US:en";
+            String rssUrl = GOOGLE_NEWS_RSS_SEARCH_URL
+                    + "?q=" + encoded
+                    + "&hl=en-US&gl=US&ceid=US:en";
             URL url = new URL(rssUrl);
 
             DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();

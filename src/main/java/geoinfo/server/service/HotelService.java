@@ -9,14 +9,15 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.Scanner;
 
 public class HotelService {
 
     //private static final String API_KEY = "a7c2d91ec1msh146f0a8ec35cc8dp11944bjsn982b0aad2229";
-    private static final String API_KEY = "a968ffde8dmshc5924334016a795p178ea7jsn153760f2cd40";
+    //private static final String API_KEY = "a968ffde8dmshc5924334016a795p178ea7jsn153760f2cd40";
+    private static final String API_KEY = "bcc7f416e6msh4f93873e256a54cp1af5a9jsnb2e291229596";
     private static final String API_HOST = "booking-com.p.rapidapi.com";
     private static final String BASE_URL = "https://booking-com.p.rapidapi.com/v1/hotels";
+    private static final String BOOKING_WEB_BASE_URL = "https://www.booking.com";
     private static final Map<String, String> API_HEADERS = Map.of(
             "x-rapidapi-key", API_KEY,
             "x-rapidapi-host", API_HOST,
@@ -166,18 +167,86 @@ public class HotelService {
         String reviewScore = extractReviewScore(hotel);
         String reviewCount = extractReviewCount(hotel);
         String hotelClass = extractHotelClass(hotel);
+        String imageUrl = normalizeImageUrl(extractHotelImageUrl(hotel));
         String hotelUrl = normalizeUrl(firstNonBlank(hotel.optString("url"), hotel.optString("hotel_url")));
         String hotelId = hotel.opt("hotel_id") == null ? "" : String.valueOf(hotel.opt("hotel_id"));
 
-        return new JSONObject()
+        JSONObject result = new JSONObject()
                 .put("name", name)
                 .put("address", address)
                 .put("price", price)
                 .put("reviewScore", reviewScore)
                 .put("reviewCount", reviewCount)
                 .put("hotelClass", hotelClass)
+                .put("imageUrl", imageUrl)
                 .put("url", hotelUrl)
                 .put("reviews", hotelId.isBlank() ? new JSONArray() : getHotelReviews(hotelId));
+
+        if (imageUrl.isBlank()) {
+            result.remove("imageUrl");
+        }
+
+        return result;
+    }
+
+    private static String extractHotelImageUrl(JSONObject hotel) {
+        if (hotel == null) {
+            return "";
+        }
+
+        String direct = firstNonBlank(
+                hotel.optString("max_1440_photo_url"),
+                hotel.optString("max_photo_url"),
+                hotel.optString("main_photo_url"),
+                hotel.optString("photo_url"),
+                hotel.optString("image_url"),
+                hotel.optString("imageUrl"),
+                hotel.optString("thumbnail_url")
+        );
+        if (!direct.isBlank()) {
+            return direct;
+        }
+
+        JSONArray photos = hotel.optJSONArray("photos");
+        if (photos != null && !photos.isEmpty()) {
+            Object first = photos.opt(0);
+            if (first instanceof String s) {
+                return s;
+            }
+            if (first instanceof JSONObject obj) {
+                // Also prioritize max resolution here.
+                return firstNonBlank(
+                        obj.optString("max_photo_url"),
+                        obj.optString("main_photo_url"),
+                        obj.optString("url"),
+                        obj.optString("photo_url")
+                );
+            }
+        }
+
+        JSONObject mainPhoto = hotel.optJSONObject("main_photo");
+        if (mainPhoto != null) {
+            // And here.
+            return firstNonBlank(
+                    mainPhoto.optString("max_photo_url"),
+                    mainPhoto.optString("main_photo_url"),
+                    mainPhoto.optString("url"),
+                    mainPhoto.optString("photo_url")
+            );
+        }
+
+        return "";
+    }
+
+    private static String normalizeImageUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return "";
+        }
+        String trimmed = url.trim();
+        if (trimmed.startsWith("//")) {
+            return "https:" + trimmed;
+        }
+        return trimmed;
     }
 
     private static String buildAddress(JSONObject hotel) {
@@ -271,9 +340,9 @@ public class HotelService {
             return url;
         }
         if (url.startsWith("/")) {
-            return "https://www.booking.com" + url;
+            return BOOKING_WEB_BASE_URL + url;
         }
-        return "https://www.booking.com/" + url;
+        return BOOKING_WEB_BASE_URL + "/" + url;
     }
 
     private static String getArrivalDate() {
@@ -412,12 +481,5 @@ public class HotelService {
             return normalized;
         }
         return normalized.substring(0, maxLength - 3).trim() + "...";
-    }
-
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        System.out.print("City name: ");
-        String city = sc.nextLine();
-        System.out.println(getHotelsByCity(city));
     }
 }

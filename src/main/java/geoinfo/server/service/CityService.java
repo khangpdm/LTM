@@ -21,15 +21,18 @@ public class CityService {
     private static final String API_NINJAS_KEY = "DgGav2PqKdwGSy3B82AaE4cdRFtnE7qNFcYF4Yj1";
     private static final String GEONAMES_USERNAME = "tinmi2005";
 
+    private static final String WEATHER_CURRENT_API_URL = "https://api.weatherapi.com/v1/current.json";
+    private static final String API_NINJAS_CITY_API_URL = "https://api.api-ninjas.com/v1/city";
+    private static final String GEONAMES_SEARCH_API_URL = "http://api.geonames.org/searchJSON";
+
     private static final ExecutorService BACKGROUND_EXECUTOR = Executors.newFixedThreadPool(4);
 
     public static String getCityInfo(String input) {
         try {
             String sanitized = validateInput(input);
-            String url = "https://api.weatherapi.com/v1/current.json?key="
-                    + WEATHER_API_KEY
-                    + "&q="
-                    + URLEncoder.encode(sanitized.trim(), StandardCharsets.UTF_8)
+            String url = WEATHER_CURRENT_API_URL
+                    + "?key=" + WEATHER_API_KEY
+                    + "&q=" + URLEncoder.encode(sanitized.trim(), StandardCharsets.UTF_8)
                     + "&aqi=no";
 
             Document doc = ApiConnector.get(url);
@@ -45,7 +48,6 @@ public class CityService {
                 return createErrorResponse("Failed to load city data: not found city.");
             }
 
-            String region = location.optString("region");
             String country = location.optString("country");
             double latitude = location.optDouble("lat");
             double longitude = location.optDouble("lon");
@@ -74,21 +76,19 @@ public class CityService {
             ).exceptionally(e -> "no data");
 
             String population = populationF.join();
+            
+            String currentWeather = temperatureCelsius + " °C, " + weatherCondition
+                    + ", humidity: " + humidity + "%, wind: " + windKph + " km/h";
 
             JSONObject response = new JSONObject();
             response.put("status", "success");
             response.put("type", "city");
             response.put("name", name);
-            response.put("region", region);
             response.put("country", country);
             response.put("population", population);
-            response.put("latitude", latitude);
-            response.put("longitude", longitude);
+            response.put("coordinates", new JSONArray().put(longitude).put(latitude));
             response.put("localTime", localTime);
-            response.put("temperatureCelsius", temperatureCelsius);
-            response.put("weatherCondition", weatherCondition);
-            response.put("humidity", humidity);
-            response.put("windKph", windKph);
+            response.put("currentWeather", currentWeather);
             response.put("moreInfoRequest", "city-more:" + name);
             response.put("moreInfoLabel", "More Information");
             return response.toString(2);
@@ -100,10 +100,9 @@ public class CityService {
     public static String getCityMoreInfo(String input) {
         try {
             String sanitized = validateInput(input);
-            String url = "https://api.weatherapi.com/v1/current.json?key="
-                    + WEATHER_API_KEY
-                    + "&q="
-                    + URLEncoder.encode(sanitized.trim(), StandardCharsets.UTF_8)
+            String url = WEATHER_CURRENT_API_URL
+                    + "?key=" + WEATHER_API_KEY
+                    + "&q=" + URLEncoder.encode(sanitized.trim(), StandardCharsets.UTF_8)
                     + "&aqi=no";
 
             Document doc = ApiConnector.get(url);
@@ -154,10 +153,9 @@ public class CityService {
             return "no weather data.";
         }
 
-        String url = "https://api.weatherapi.com/v1/current.json?key="
-                + WEATHER_API_KEY
-                + "&q="
-                + URLEncoder.encode(query.trim(), StandardCharsets.UTF_8)
+        String url = WEATHER_CURRENT_API_URL
+                + "?key=" + WEATHER_API_KEY
+                + "&q=" + URLEncoder.encode(query.trim(), StandardCharsets.UTF_8)
                 + "&aqi=no";
         try {
             Document doc = ApiConnector.get(url);
@@ -229,8 +227,8 @@ public class CityService {
         HttpURLConnection connection = null;
 
         try {
-            String url = "https://api.api-ninjas.com/v1/city?name="
-                    + URLEncoder.encode(cityName, StandardCharsets.UTF_8);
+            String url = API_NINJAS_CITY_API_URL
+                    + "?name=" + URLEncoder.encode(cityName, StandardCharsets.UTF_8);
 
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
@@ -287,13 +285,11 @@ public class CityService {
 
     private static String getCityPopulationFromGeoNames(String cityName, String countryName) {
         try {
-            String url = "http://api.geonames.org/searchJSON?q="
-                    + URLEncoder.encode(cityName, StandardCharsets.UTF_8)
-                    + "&countryBias="
-                    + URLEncoder.encode(countryName, StandardCharsets.UTF_8)
+            String url = GEONAMES_SEARCH_API_URL
+                    + "?q=" + URLEncoder.encode(cityName, StandardCharsets.UTF_8)
+                    + "&countryBias=" + URLEncoder.encode(countryName, StandardCharsets.UTF_8)
                     + "&featureClass=P"
-                    + "&maxRows=10&username="
-                    + GEONAMES_USERNAME;
+                    + "&maxRows=10&username=" + GEONAMES_USERNAME;
 
             Document doc = ApiConnector.get(url);
             JSONObject json = new JSONObject(doc.text());
