@@ -59,6 +59,10 @@ public class CityAndCountryComponent extends VBox {
             Node card = cards.get(i);
             grid.add(card, col, row);
             GridPane.setHgrow(card, Priority.ALWAYS);
+
+            if (i == cards.size() - 1 && cards.size() % 2 != 0) {
+                GridPane.setColumnSpan(card, 2);
+            }
         }
 
         requestLayout();

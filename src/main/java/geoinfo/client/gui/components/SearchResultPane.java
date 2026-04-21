@@ -294,14 +294,6 @@ public class SearchResultPane extends VBox {
                 if (requestId == latestRequestId.get()) {
                     cachedMoreInfo = finalResult;
                     isLoadingMoreInfo = false;
-
-                    // Tự động append hotels khi load xong
-                    if (cachedMoreInfo != null) {
-                        JSONArray hotels = cachedMoreInfo.optJSONArray("hotels");
-                        if (hotels != null && !hotels.isEmpty()) {
-                            addHotelSection("Hotels", hotels);
-                        }
-                    }
                 }
             });
         });
@@ -328,7 +320,7 @@ public class SearchResultPane extends VBox {
             }
 
             JSONObject finalResult = result;
-            Platform.runLater(() -> {  // ← ĐẢM BẢO CHẠY TRÊN FX THREAD
+            Platform.runLater(() -> {
                 if (requestId == latestRequestId.get()) {
                     cachedHotels = finalResult;
                     isLoadingHotels = false;
@@ -337,7 +329,7 @@ public class SearchResultPane extends VBox {
                     if (cachedHotels != null) {
                         JSONArray hotels = cachedHotels.optJSONArray("hotels");
                         if (hotels != null && !hotels.isEmpty()) {
-                            addHotelSection("Hotels", hotels);  // ← GIỜ AN TOÀN
+                            addHotelSection("Hotels", hotels);
                         }
                     }
                 }
@@ -420,9 +412,9 @@ public class SearchResultPane extends VBox {
     }
     // 6.3. Nối thêm các section News, Hotels, Attractions vào resultContainer (dùng cho chế độ appendMode)
     private void appendAdditionalSections(JSONObject json) {
-        addNewsSection("News", json.optJSONArray("news"));
-        addHotelSection("Hotels", json.optJSONArray("hotels"));
-        addAttractionSection("Attractions", json.optJSONArray("attractions"));
+        addNewsSection("Some news", json.optJSONArray("news"));
+        addHotelSection("Some hotels", json.optJSONArray("hotels"));
+        addAttractionSection("Some attractions", json.optJSONArray("attractions"));
 
         String message = json.optString("message", "").trim();
         if (!message.isBlank()) {
