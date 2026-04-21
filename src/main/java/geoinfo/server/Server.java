@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyPairGenerator;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server {
+    private static final DateTimeFormatter LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private int port;
     private final ThreadPoolExecutor threadPool;
     private volatile boolean isRunning;
@@ -47,20 +50,16 @@ public class Server {
             port = serverSocket.getLocalPort();
             publishServerEndpoint();
 
-            System.out.println("||=========================================================||");
-            System.out.printf("|| %-55s ||%n", "The Server is listening at the port: " + port);
-            System.out.println("||=========================================================||");
-            System.out.printf("|| %-55s ||%n", "  - Core Pool Size: " + threadPool.getCorePoolSize());
-            System.out.printf("|| %-55s ||%n", "  - Maximum Pool Size: " + threadPool.getMaximumPoolSize());
-            System.out.printf("|| %-55s ||%n", "  - Queue Capacity: " + threadPool.getQueue().remainingCapacity());
-            System.out.printf("|| %-55s ||%n", "  - Keep Alive Time: 60 seconds");
-            System.out.println("||=========================================================||");
-            System.out.println();
+            logInfo("Server started on port " + port);
+            logInfo("ThreadPool config: core=" + threadPool.getCorePoolSize()
+                    + ", max=" + threadPool.getMaximumPoolSize()
+                    + ", queueCapacity=" + (threadPool.getQueue().size() + threadPool.getQueue().remainingCapacity())
+                    + ", keepAlive=60s");
 
             while (isRunning) {
                 try {
                     Socket clientSocket = serverSocket.accept();
-                    System.out.println("[+] Client connected: "
+                    logInfo("Client connected: "
                             + clientSocket.getInetAddress().getHostAddress()
                             + ":" + clientSocket.getPort());
 
@@ -68,12 +67,12 @@ public class Server {
                     threadPool.execute(() -> handleClient(clientSocket));
                 } catch (IOException e) {
                     if (isRunning) {
-                        System.err.println("Accept error: " + e.getMessage());
+                        logError("Accept error", e);
                     }
                 }
             }
         } catch (IOException e) {
-            System.err.println("Unable to start server on port " + port + ": " + e.getMessage());
+            logError("Unable to start server on port " + port, e);
         }
     }
 
@@ -81,9 +80,9 @@ public class Server {
         try {
             ServerEndpoint endpoint = new ServerEndpoint(ServerRegistryApi.resolveServerHost(), port);
             ServerRegistryApi.publishServerEndpoint(endpoint);
-            System.out.println("Published server endpoint to registry: " + endpoint.asAddress());
+            logInfo("Published server endpoint: " + endpoint.asAddress());
         } catch (IOException e) {
-            System.err.println("Unable to publish server endpoint: " + e.getMessage());
+            logError("Unable to publish server endpoint", e);
         }
     }
 
@@ -91,28 +90,25 @@ public class Server {
         try {
             ClientHandler.handleClient(clientSocket);
         } catch (Exception e) {
-            System.err.println("Client handling error: " + e.getMessage());
+            logError("Client handling error", e);
         } finally {
             try {
                 clientSocket.close();
-                System.out.println("[-] Client disconnected: " + clientSocket.getInetAddress().getHostAddress());
+                logInfo("Client disconnected: " + clientSocket.getInetAddress().getHostAddress());
             } catch (IOException e) {
-                System.err.println("Socket close error: " + e.getMessage());
+                logError("Socket close error", e);
             }
         }
     }
 
     private void printPoolStatus() {
-        System.out.println("=== THREAD POOL STATUS ===");
-        System.out.println("Pool Size: " + threadPool.getPoolSize());
-        System.out.println("Active Threads: " + threadPool.getActiveCount());
-        System.out.println("Core Pool Size: " + threadPool.getCorePoolSize());
-        System.out.println("Maximum Pool Size: " + threadPool.getMaximumPoolSize());
-        System.out.println("Queue Size: " + threadPool.getQueue().size());
-        System.out.println("Completed Tasks: " + threadPool.getCompletedTaskCount());
-        System.out.println("Total Tasks: " + threadPool.getTaskCount());
-        System.out.println("==========================");
-        System.out.println();
+        logInfo("ThreadPool status: pool=" + threadPool.getPoolSize()
+                + ", active=" + threadPool.getActiveCount()
+                + ", core=" + threadPool.getCorePoolSize()
+                + ", max=" + threadPool.getMaximumPoolSize()
+                + ", queue=" + threadPool.getQueue().size()
+                + ", completed=" + threadPool.getCompletedTaskCount()
+                + ", total=" + threadPool.getTaskCount());
     }
 
     public void stop() {
@@ -122,27 +118,46 @@ public class Server {
                 serverSocket.close();
             }
 
-            System.out.println();
-            System.out.println("Stopping server...");
+            logInfo("Stopping server...");
             threadPool.shutdown();
 
             if (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
-                System.out.println("Forcing running tasks to stop...");
+                logWarn("Graceful shutdown timeout, forcing running tasks to stop");
                 threadPool.shutdownNow();
 
                 if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
-                    System.err.println("ThreadPool did not stop cleanly");
+                    logError("ThreadPool did not stop cleanly");
                 }
             }
 
-            System.out.println("Server stopped successfully");
-            System.out.println("Total tasks processed: " + threadPool.getCompletedTaskCount());
+            logInfo("Server stopped successfully");
+            logInfo("Total tasks processed: " + threadPool.getCompletedTaskCount());
         } catch (InterruptedException e) {
             threadPool.shutdownNow();
             Thread.currentThread().interrupt();
         } catch (IOException e) {
-            System.err.println("Stop server error: " + e.getMessage());
+            logError("Stop server error", e);
         }
+    }
+
+    private static String logPrefix(String level) {
+        return "[" + LocalDateTime.now().format(LOG_TIME_FORMAT) + "] [" + level + "] [SERVER] ";
+    }
+
+    private static void logInfo(String message) {
+        System.out.println(logPrefix("INFO") + message);
+    }
+
+    private static void logWarn(String message) {
+        System.out.println(logPrefix("WARN") + message);
+    }
+
+    private static void logError(String message) {
+        System.err.println(logPrefix("ERROR") + message);
+    }
+
+    private static void logError(String message, Exception exception) {
+        logError(message + ": " + exception.getMessage());
     }
 
     private static class CustomThreadFactory implements ThreadFactory {
@@ -154,7 +169,7 @@ public class Server {
             Thread thread = new Thread(runnable, namePrefix + threadNumber.getAndIncrement());
             thread.setDaemon(false);
             thread.setPriority(Thread.NORM_PRIORITY);
-            System.out.println("Created thread: " + thread.getName());
+            logInfo("Created thread: " + thread.getName());
             return thread;
         }
     }
@@ -162,7 +177,7 @@ public class Server {
     private static class CustomRejectedExecutionHandler implements RejectedExecutionHandler {
         @Override
         public void rejectedExecution(Runnable runnable, ThreadPoolExecutor executor) {
-            System.err.println("WARNING: Task rejected. Queue is full. Active threads: "
+            logWarn("Task rejected, queue is full. Active threads: "
                     + executor.getActiveCount() + ", Pool size: " + executor.getPoolSize());
         }
     }
@@ -171,7 +186,7 @@ public class Server {
         if (newCoreSize > 0 && newCoreSize <= newMaxSize) {
             threadPool.setCorePoolSize(newCoreSize);
             threadPool.setMaximumPoolSize(newMaxSize);
-            System.out.println("Adjusted pool size: Core=" + newCoreSize + ", Max=" + newMaxSize);
+            logInfo("Adjusted pool size: core=" + newCoreSize + ", max=" + newMaxSize);
         }
     }
 
@@ -186,11 +201,11 @@ public class Server {
                     server.printPoolStatus();
 
                     if (server.threadPool.getQueue().size() > 150) {
-                        System.out.println("Queue is filling up, increasing pool size...");
+                        logWarn("Queue is filling up, increasing pool size");
                         server.adjustPoolSize(20, 150);
                     } else if (server.threadPool.getQueue().size() < 50
                             && server.threadPool.getPoolSize() > 10) {
-                        System.out.println("Reducing pool size to save resources...");
+                        logInfo("Queue is stable, reducing pool size");
                         server.adjustPoolSize(10, 100);
                     }
                 } catch (InterruptedException e) {
@@ -203,8 +218,7 @@ public class Server {
         monitorThread.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println();
-            System.out.println("Shutdown signal received");
+            logInfo("Shutdown signal received");
             server.stop();
         }));
 

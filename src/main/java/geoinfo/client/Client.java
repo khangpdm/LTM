@@ -3,7 +3,6 @@ package geoinfo.client;
 import geoinfo.client.gui.components.MButton;
 import geoinfo.client.gui.pages.MapSearchPage;
 import geoinfo.client.gui.pages.SearchEnginePage;
-import geoinfo.client.gui.utils.Configure;
 import geoinfo.client.gui.utils.Consts;
 import geoinfo.client.network.ClientService;
 import geoinfo.server.network.ServerEndpoint;
@@ -24,6 +23,8 @@ public class Client extends Application {
     private BorderPane content;
     private SearchEnginePage searchEnginePage;
     private MapSearchPage mapSearchPage;
+    private MButton btnSearchPage;
+    private MButton btnMapPage;
 
     @Override
     public void start(Stage stage) {
@@ -35,35 +36,41 @@ public class Client extends Application {
         header = new HBox();
         leftMenu = new VBox();
         content = new BorderPane();
+        mainLayout.getStyleClass().add("app-shell");
+        header.getStyleClass().add("app-header");
+        leftMenu.getStyleClass().add("left-menu-card");
+        content.getStyleClass().add("content-shell");
 
         MButton title = new MButton("Geographic Information System", "/images/logo/globe.png", 22, 22);
         title.getStyleClass().add("m-button-title");
-        header.setBackground(Configure.PRIMARY_BACKGROUND);
-        header.setPadding(new Insets(10, 20, 10, 20));
+        title.getStyleClass().add("app-title");
+        header.setPadding(new Insets(12, 20, 12, 20));
         header.getChildren().add(title);
 
-        MButton btnSearchPage = new MButton("Search Engine", "");
-        MButton btnMapPage = new MButton("Map Search", "");
+        btnSearchPage = new MButton("Search Engine", "");
+        btnMapPage = new MButton("Map Search", "");
+        btnSearchPage.getStyleClass().add("side-nav-button");
+        btnMapPage.getStyleClass().add("side-nav-button");
 
-        leftMenu.setSpacing(10);
-        leftMenu.setPadding(new Insets(50, 20, 50, 40));
+        leftMenu.setSpacing(12);
+        leftMenu.setPadding(new Insets(24, 16, 24, 16));
         leftMenu.getChildren().addAll(btnSearchPage, btnMapPage);
         leftMenu.setPrefWidth(Consts.APP_DEFAULT_WIDTH - Consts.CONTENT_DEFAULT_WIDTH);
-        leftMenu.setBackground(Configure.SECONDARY_BACKGROUND);
+        BorderPane.setMargin(leftMenu, new Insets(20, 0, 20, 20));
 
-        btnSearchPage.setOnAction(e -> content.setCenter(searchEnginePage));
-        btnMapPage.setOnAction(e -> content.setCenter(mapSearchPage));
+        btnSearchPage.setOnAction(e -> showSearchPage());
+        btnMapPage.setOnAction(e -> showMapPage());
 
-        content.setCenter(searchEnginePage);
-        content.setPadding(new Insets(50, 40, 50, 20));
+        showSearchPage();
+        content.setPadding(new Insets(20, 24, 20, 16));
 
         mainLayout.setTop(header);
         mainLayout.setCenter(content);
         mainLayout.setLeft(leftMenu);
-        mainLayout.setBackground(Configure.SECONDARY_BACKGROUND);
 
         Scene scene = new Scene(mainLayout, 1300, 700);
         scene.getStylesheets().add(getClass().getResource("/utils/Configure.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/utils/ModernTheme.css").toExternalForm());
         stage.setScene(scene);
         stage.setTitle("Geo Info");
         stage.show();
@@ -79,6 +86,24 @@ public class Client extends Application {
     public void stop() {
         if (clientService != null) {
             clientService.disconnect();
+        }
+    }
+
+    private void showSearchPage() {
+        content.setCenter(searchEnginePage);
+        setActiveMenu(btnSearchPage);
+    }
+
+    private void showMapPage() {
+        content.setCenter(mapSearchPage);
+        setActiveMenu(btnMapPage);
+    }
+
+    private void setActiveMenu(MButton activeButton) {
+        btnSearchPage.getStyleClass().remove("side-nav-button-active");
+        btnMapPage.getStyleClass().remove("side-nav-button-active");
+        if (!activeButton.getStyleClass().contains("side-nav-button-active")) {
+            activeButton.getStyleClass().add("side-nav-button-active");
         }
     }
 
