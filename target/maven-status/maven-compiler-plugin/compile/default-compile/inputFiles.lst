@@ -7,6 +7,9 @@ D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\pages\SearchEnginePage.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\utils\Configure.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\gui\utils\Consts.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\client\network\ClientService.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\common\SecurityConfig.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\common\SecurityUtils.java
+D:\LTM\DOAN\LTM\src\main\java\geoinfo\common\Setup.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\handler\ClientHandler.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\network\ServerEndpoint.java
 D:\LTM\DOAN\LTM\src\main\java\geoinfo\server\network\ServerRegistryApi.java

@@ -93,7 +93,7 @@ public class CityService {
             response.put("moreInfoLabel", "More Information");
             return response.toString(2);
         } catch (Exception e) {
-            return createErrorResponse("Failed to load city data: " + e.getMessage());
+            return createErrorResponse("Failed to load city data");
         }
     }
 
@@ -139,7 +139,7 @@ public class CityService {
             response.put("hotels", hotelsF.join());
             return response.toString(2);
         } catch (Exception e) {
-            return createErrorResponse("Failed to load more city data: " + e.getMessage());
+            return createErrorResponse("Failed to load more city data");
         }
     }
 

@@ -94,7 +94,7 @@ public class Server {
         } finally {
             try {
                 clientSocket.close();
-                logInfo("Client disconnected: " + clientSocket.getInetAddress().getHostAddress());
+                //logInfo("Client disconnected: " + clientSocket.getInetAddress().getHostAddress());
             } catch (IOException e) {
                 logError("Socket close error", e);
             }

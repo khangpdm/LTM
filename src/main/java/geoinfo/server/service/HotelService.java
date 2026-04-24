@@ -12,9 +12,7 @@ import java.util.Map;
 
 public class HotelService {
 
-    //private static final String API_KEY = "a7c2d91ec1msh146f0a8ec35cc8dp11944bjsn982b0aad2229";
-    //private static final String API_KEY = "a968ffde8dmshc5924334016a795p178ea7jsn153760f2cd40";
-    private static final String API_KEY = "bcc7f416e6msh4f93873e256a54cp1af5a9jsnb2e291229596";
+    private static final String API_KEY = "121bdbb168msh0bb271e007af547p1548cbjsn1976e7ffb760";
     private static final String API_HOST = "booking-com.p.rapidapi.com";
     private static final String BASE_URL = "https://booking-com.p.rapidapi.com/v1/hotels";
     private static final String BOOKING_WEB_BASE_URL = "https://www.booking.com";
