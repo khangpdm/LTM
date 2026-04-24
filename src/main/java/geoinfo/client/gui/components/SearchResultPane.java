@@ -50,6 +50,7 @@ public class SearchResultPane extends VBox {
         initComponent();
         buildLayout();
     }
+
     // 1.1. Khởi tạo tất cả các thành phần GUI
     private void initComponent(){
         flagPreview = new ImageView();
@@ -82,6 +83,7 @@ public class SearchResultPane extends VBox {
         resultScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         resultScrollPane.getStyleClass().add("result-scroll");
     }
+
     // 1.2. Sắp xếp bố cục các thành phần
     private void buildLayout() {
         Region spacer = new Region();
@@ -141,8 +143,7 @@ public class SearchResultPane extends VBox {
         String request = pendingMoreInfoRequest;
         if (request == null || request.isBlank()) { return; }
         if (request.equals(loadedMoreInfoRequest)) { return; }
-
-        // === THÊM: Dùng cache nếu đã có ===
+        // Note: Sử lý load dữ liệu dùng cache nếu đã có
         if (cachedMoreInfo != null) {
             renderResponse(cachedMoreInfo.toString(), true);
             loadedMoreInfoRequest = request;
@@ -150,13 +151,11 @@ public class SearchResultPane extends VBox {
             moreInfoButton.setDisable(true);
             return;
         }
-
-        // === THÊM: Nếu đang loading thì chờ ===
+        // Note: Nếu đang loading thì chờ
         if (isLoadingMoreInfo) {
             moreInfoButton.setDisable(true);
             moreInfoButton.setText("Information is being loaded...");
-
-            // Poll chờ cache sẵn sàng
+            // Note: Poll chờ cache sẵn sàng
             SEARCH_EXECUTOR.submit(() -> {
                 while (isLoadingMoreInfo) {
                     try {
@@ -170,8 +169,7 @@ public class SearchResultPane extends VBox {
             });
             return;
         }
-
-        // Fallback: gọi API như cũ nếu không có cache
+        // Note: (Fallback) gọi API như cũ nếu không có cache
         long requestId = latestRequestId.get();
         moreInfoButton.setDisable(true);
         moreInfoButton.setText("Dang tai them...");
@@ -259,8 +257,7 @@ public class SearchResultPane extends VBox {
             moreInfoButton.setManaged(true);
             moreInfoButton.setDisable(false);
             moreInfoButton.setText(json.optString("moreInfoLabel", "Them thong tin"));
-
-            // === THÊM: Prefetch more info trong background ===
+            // Note:: Prefetch more info trong background
             prefetchMoreInfo(pendingMoreInfoRequest);
 
             String hotelsRequest = json.optString("hotelsRequest", "").trim();
@@ -271,9 +268,7 @@ public class SearchResultPane extends VBox {
     }
     // 6.1.1. Tải trước dữ liệu "more info" trong background và lưu vào cachedMoreInfo
     private void prefetchMoreInfo(String request) {
-        if (request == null || request.isBlank()) {
-            return;
-        }
+        if (request == null || request.isBlank()) {return;}
 
         long requestId = latestRequestId.get();
         isLoadingMoreInfo = true;
@@ -302,9 +297,7 @@ public class SearchResultPane extends VBox {
     }
     //6.2.2. Tải trước dữ liệu khách sạn trong background, lưu vào cachedHotels và tự động append khi load xong
     private void prefetchHotels(String request) {
-        if (request == null || request.isBlank()) {
-            return;
-        }
+        if (request == null || request.isBlank()) {return;}
 
         long requestId = latestRequestId.get();
         isLoadingHotels = true;

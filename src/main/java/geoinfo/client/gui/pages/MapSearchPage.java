@@ -33,12 +33,14 @@ public class MapSearchPage extends BorderPane {
     private Group map;
     private Pane mapContainer;
 
+    // 1. CONSTRUCTOR KHỞI TẠO ĐỐI TƯỢNG CHÍNH
     public MapSearchPage(SearchEnginePage searchEnginePage) {
         this.searchEnginePage = searchEnginePage;
         initComponents();
         buildLayout();
     }
 
+    // 1.1. Khởi tạo tất cả các thành phần GUI
     private void initComponents() {
         try {
             String path = System.getProperty("user.dir") + "/src/main/resources/data/world.svg";
@@ -55,6 +57,7 @@ public class MapSearchPage extends BorderPane {
         }
     }
 
+    // 1.2. Sắp xếp bố cục các thành phần
     private void buildLayout() {
         mapContainer = new Pane();
         mapContainer.getChildren().add(map);
@@ -69,6 +72,8 @@ public class MapSearchPage extends BorderPane {
 
         this.setCenter(mapContainer);
     }
+
+    // 2. ĐỌC FILE SVG, PARSE CÁC THẺ <PATH> VÀ TẠO CÁC ĐỐI TƯỢNG SVGPATH CÓ THỂ TƯƠNG TÁC ĐƯỢC
     public Group loadSvgMap(String filePath) throws Exception {
         Group mapGroup = new Group();
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -85,21 +90,24 @@ public class MapSearchPage extends BorderPane {
             svgPath.setFill(Color.AZURE);
             svgPath.setStroke(Color.BLACK);
             svgPath.setStrokeWidth(0.2);
-
+            // Note: Khi chuột di vào quốc gia, đổi màu fill thành GRAY và hiển thị tooltip với tên quốc gia
             svgPath.setOnMouseEntered(event -> {
                 svgPath.setFill(Color.GRAY);
                 mapTooltip.setText(nameCountry);
                 mapTooltip.setVisible(true);
             });
+            // Note: Khi chuột di chuyển trên quốc gia, cập nhật vị trí của tooltip theo tọa độ chuột (cách chuột 15px)
             svgPath.setOnMouseMoved(event -> {
                 Point2D localMouse = mapContainer.sceneToLocal(event.getSceneX(), event.getSceneY());
                 mapTooltip.setLayoutX(localMouse.getX() + 15);
                 mapTooltip.setLayoutY(localMouse.getY() + 15);
             });
+            // Note: Khi chuột rời khỏi quốc gia, đổi màu fill về AZURE và ẩn tooltip.
             svgPath.setOnMouseExited(event -> {
                 svgPath.setFill(Color.AZURE);
                 mapTooltip.setVisible(false);
             });
+            // Note: Khi click chuột phải (SECONDARY) vào quốc gia, gọi showSearchResult(nameCountry) để hiển thị kết quả tìm kiếm
             svgPath.setOnMouseClicked(event -> {
                 event.consume();
                 if (event.getButton() == javafx.scene.input.MouseButton.SECONDARY) {
@@ -111,10 +119,11 @@ public class MapSearchPage extends BorderPane {
         return mapGroup;
     }
 
+    // 3. THÊM CHỨC NĂNG ZOOM BẰNG CON LĂN CHUỘT VÀ PAN BẰNG KÉO THẢ CHUỘT TRÁI CHO BẢN ĐỒ.
     public void enableZoomAndPan(Pane container, Group content) {
         final double[] mouseAnchor = new double[2];
         final double[] translateAnchor = new double[2];
-
+        // Note: Phóng to/thu nhỏ bản đồ khi người dùng cuộn chuột
         container.setOnScroll(event -> {
             double zoomFactor = event.getDeltaY() > 0 ? 1.1 : 0.9;
             double oldScale = content.getScaleX();
@@ -139,7 +148,7 @@ public class MapSearchPage extends BorderPane {
             }
             event.consume();
         });
-
+        // Note: Lưu vị trí chuột và translate hiện tại khi bắt đầu kéo (chỉ với chuột trái PRIMARY).
         container.setOnMousePressed(event -> {
             if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
                 mouseAnchor[0] = event.getSceneX();
@@ -148,7 +157,7 @@ public class MapSearchPage extends BorderPane {
                 translateAnchor[1] = content.getTranslateY();
             }
         });
-
+        // Note: Khi kéo chuột trái, tính toán delta di chuyển và cập nhật translateX/translateY của content
         container.setOnMouseDragged(event -> {
             if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
                 double deltaX = event.getSceneX() - mouseAnchor[0];
@@ -177,8 +186,7 @@ public class MapSearchPage extends BorderPane {
         });
     }
 
-
-
+    // 4. HIỂN THỊ PANEL KẾT QUẢ TÌM KIẾM Ở PHÍA DƯỚI TRANG BẢN ĐỒ KHI NGƯỜI DÙNG CLICK CHUỘT PHẢI VÀO MỘT QUỐC GIA
     private void showSearchResult(String countryName) {
         this.setBottom(null);
 
@@ -218,10 +226,12 @@ public class MapSearchPage extends BorderPane {
 
         final double[] dragAnchorY = new double[1];
         final double[] dragStartHeight = new double[1];
+        // Note: Lưu vị trí Y của chuột và chiều cao hiện tại của panel.
         resizeHandle.setOnMousePressed(event -> {
             dragAnchorY[0] = event.getSceneY();
             dragStartHeight[0] = bottomPanel.getPrefHeight();
         });
+        // Note: Khi kéo, tính chiều cao mới = chiều cao cũ + delta kéo
         resizeHandle.setOnMouseDragged(event -> {
             double dragDelta = dragAnchorY[0] - event.getSceneY();
             double candidateHeight = dragStartHeight[0] + dragDelta;
@@ -236,7 +246,7 @@ public class MapSearchPage extends BorderPane {
             toggleButton.setText("▼");
             isExpanded = true;
         });
-
+        // Note: Chuyển đổi trạng thái thu gọn/mở rộng của panel kết quả
         toggleButton.setOnAction(e -> {
             if (isExpanded) {
                 lastExpandedHeight = bottomPanel.getPrefHeight();
@@ -264,6 +274,5 @@ public class MapSearchPage extends BorderPane {
         this.setBottom(bottomPanel);
 
         resultPane.search("country:" + countryName, "Searching for " + countryName + "...");
-
     }
 }

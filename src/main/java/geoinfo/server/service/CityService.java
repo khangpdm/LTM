@@ -6,12 +6,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,14 +25,14 @@ public class CityService {
 
     private static final ExecutorService BACKGROUND_EXECUTOR = Executors.newFixedThreadPool(4);
 
+    // 1. LẤY THÔNG TIN CƠ BẢN CỦA MỘT THÀNH PHỐ (THỜI TIẾT, VỊ TRÍ, DÂN SỐ) DỰA TRÊN TÊN ĐẦU VÀO
     public static String getCityInfo(String input) {
         try {
-            String sanitized = validateInput(input);
+            String sanitized = ValidationUtils.validateLocationInput(input);
             String url = WEATHER_CURRENT_API_URL
                     + "?key=" + WEATHER_API_KEY
                     + "&q=" + URLEncoder.encode(sanitized.trim(), StandardCharsets.UTF_8)
                     + "&aqi=no";
-
             Document doc = ApiConnector.get(url);
             JSONObject json = new JSONObject(doc.text());
 
@@ -77,8 +75,7 @@ public class CityService {
 
             String population = populationF.join();
             
-            String currentWeather = temperatureCelsius + " °C, " + weatherCondition
-                    + ", humidity: " + humidity + "%, wind: " + windKph + " km/h";
+            String currentWeather = temperatureCelsius + " °C, " + weatherCondition + ", humidity: " + humidity + "%, wind: " + windKph + " km/h";
 
             JSONObject response = new JSONObject();
             response.put("status", "success");
@@ -97,9 +94,10 @@ public class CityService {
         }
     }
 
+    // 2. LẤY THÔNG TIN BỔ SUNG VỀ THÀNH PHỐ (TIN TỨC VÀ KHÁCH SẠN)
     public static String getCityMoreInfo(String input) {
         try {
-            String sanitized = validateInput(input);
+            String sanitized = ValidationUtils.validateLocationInput(input);
             String url = WEATHER_CURRENT_API_URL
                     + "?key=" + WEATHER_API_KEY
                     + "&q=" + URLEncoder.encode(sanitized.trim(), StandardCharsets.UTF_8)
@@ -143,13 +141,14 @@ public class CityService {
         }
     }
 
+    // 3. LẤY TÓM TẮT THỜI TIẾT CHO MỘT ĐỊA ĐIỂM (THÀNH PHỐ HOẶC THỦ ĐÔ)
     public static String getWeatherSummary(String query) {
-        if (query == null) {
+        if (ValidationUtils.isEmpty(query)) {
             return "no weather data.";
         }
 
-        query = query.replaceAll("\\s+", " ").trim();
-        if (query.isEmpty()) {
+        query = ValidationUtils.sanitizeInput(query);
+        if (ValidationUtils.isEmpty(query)) {
             return "no weather data.";
         }
 
@@ -179,29 +178,16 @@ public class CityService {
         }
     }
 
-    private static String validateInput(String input) {
-        if (input == null) {
-            throw new IllegalArgumentException("data is empty.");
-        }
-
-        input = normalizeName(input);
-        if (input.isEmpty()) {
-            throw new IllegalArgumentException("data is empty.");
-        }
-        if (input.length() < 2) {
-            throw new IllegalArgumentException("city name is too short.");
-        }
-        if (input.length() > 100) {
-            throw new IllegalArgumentException("city name is too long.");
-        }
-        if (!ValidationUtils.isValidLocationName(input)) {
-            throw new IllegalArgumentException("city name is invalid.");
-        }
-        return input;
+    // 4. KIỂM TRA XEM TÊN THÀNH PHỐ INPUT CÓ KHỚP VỚI TÊN TRẢ VỀ TỪ API KHÔNG (HỖ TRỢ SO SÁNH MỘT PHẦN)
+    private static boolean isReasonablySameCity(String input, String resolvedName) {
+        String a = ValidationUtils.normalizeName(input);        // Note: input
+        String b = ValidationUtils.normalizeName(resolvedName); // Note: api
+        return a.equals(b) || a.contains(b) || b.contains(a);   //Note: so sánh input và api để phòng trường hợp 'ho chi minh' và 'thanh pho ho chi minh'
     }
 
+    // 1.1. Lấy dân số của thành phố bằng cách gọi song song 2 API ,
     private static String getCityPopulation(String cityName, String countryName, double lat, double lon) {
-        // Gọi song song cả 2 API
+        // Note: Gọi song song cả 2 API
         CompletableFuture<String> ninjasF = CompletableFuture.supplyAsync(
                 () -> getCityPopulationFromApiNinjas(cityName, lat, lon),
                 BACKGROUND_EXECUTOR
@@ -211,18 +197,16 @@ public class CityService {
                 () -> getCityPopulationFromGeoNames(cityName, countryName),
                 BACKGROUND_EXECUTOR
         ).exceptionally(e -> "no data");
-
-        // Chờ cả 2
+        // Note: Chờ cả 2 hoàn thành
         CompletableFuture.allOf(ninjasF, geonamesF).join();
-
-        // Ưu tiên ApiNinjas, fallback GeoNames
+        // Note: Ưu tiên ApiNinjas, fallback GeoNames
         String ninjasResult = ninjasF.join();
         if (!"no data".equals(ninjasResult) && !ninjasResult.startsWith("no data")) {
             return ninjasResult;
         }
         return geonamesF.join();
     }
-
+    // 1.1.1. Gọi API Ninjas để lấy dân số thành phố dựa trên tên và tọa độ
     private static String getCityPopulationFromApiNinjas(String cityName, double targetLat, double targetLon) {
         HttpURLConnection connection = null;
 
@@ -282,7 +266,7 @@ public class CityService {
             }
         }
     }
-
+    // 1.1.2. Gọi API GeoNames để lấy dân số thành phố dựa trên tên và quốc gia
     private static String getCityPopulationFromGeoNames(String cityName, String countryName) {
         try {
             String url = GEONAMES_SEARCH_API_URL
@@ -313,33 +297,7 @@ public class CityService {
         }
     }
 
-    private static String normalizeName(String value) {
-        if (value == null) {
-            return "";
-        }
-
-        // tách các ký tự có dấu thành: chữ cái gốc + dấu (ví dụ: 'á' thành 'a' + '´')
-        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD);
-        // sử dụng Regex để xóa các dấu
-        normalized = normalized.replaceAll("\\p{M}+", "");
-        // ư ơ hàm Normalizer.Form.NFD tách được nên không cần xử lý riêng
-        normalized = normalized.replace("đ", "d")
-                .replace("Đ", "D");
-
-        return normalized.toLowerCase()
-                .replaceAll("[^a-z0-9 ]", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
-    }
-
-    private static boolean isReasonablySameCity(String input, String resolvedName) {
-        String a = normalizeName(input); // input
-        String b = normalizeName(resolvedName); // api
-
-        //so sánh input và api để phòng trường hợp 'ho chi minh' và 'thanh pho ho chi minh'
-        return a.equals(b) || a.contains(b) || b.contains(a);
-    }
-
+    // 1.2. Tạo JSON response cho trường hợp lỗi với status "error", type "city"
     private static String createErrorResponse(String message) {
         return new JSONObject()
                 .put("status", "error")
@@ -348,6 +306,7 @@ public class CityService {
                 .toString(2);
     }
 
+    // 2.1.  Trích xuất mảng "items" từ JSON text trả về từ service khác.
     private static JSONArray extractItems(String jsonText) {
         try {
             JSONObject json = new JSONObject(jsonText);

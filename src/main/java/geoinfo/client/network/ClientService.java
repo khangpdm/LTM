@@ -50,7 +50,6 @@ public class ClientService {
             writer.println(SecurityUtils.encryptAES(message, sessionKey));
 
             socket.setSoTimeout(100000);
-//            writer.println(message);
             writer.flush();
 
             StringBuilder response = new StringBuilder();

@@ -3,7 +3,7 @@ package geoinfo.client.gui.pages;
 import geoinfo.client.gui.components.SearchResultPane;
 import geoinfo.client.gui.utils.Consts;
 import geoinfo.client.network.ClientService;
-import geoinfo.server.utils.ValidationUtils;
+import geoinfo.client.utils.Validation;
 import javafx.geometry.Insets;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -25,6 +25,7 @@ public class SearchEnginePage extends BorderPane {
     private BorderPane pnlContent;
     private ImageView searchIcon;
 
+    // 1. CONSTRUCTOR KHỞI TẠO ĐỐI TƯỢNG CHÍNH
     public SearchEnginePage(ClientService clientService) {
         this.clientService = clientService;
         this.resultPane = new SearchResultPane(clientService);
@@ -32,6 +33,7 @@ public class SearchEnginePage extends BorderPane {
         buildLayout();
     }
 
+    // 1.1. Khởi tạo tất cả các thành phần GUI
     private void initComponents() {
         txtSearch = new TextField();
         txtSearch.setPromptText("Enter the keyword to search ...");
@@ -73,6 +75,7 @@ public class SearchEnginePage extends BorderPane {
         pnlContent.getStyleClass().add("search-content-panel");
     }
 
+    // 1.2. Sắp xếp bố cục các thành phần
     private void buildLayout() {
         searchIcon.setPickOnBounds(true);
         searchIcon.setOnMouseClicked(event -> search());
@@ -102,12 +105,13 @@ public class SearchEnginePage extends BorderPane {
         this.setCenter(pnlContent);
     }
 
+    // 2. XỬ LÝ SỰ KIỆN TÌM KIẾM KHI NGƯỜI DÙNG NHẤN ENTER HOẶC CLICK ICON TÌM KIẾM
     private void search() {
         String originalKeyword = txtSearch.getText();
-        String keyword = ValidationUtils.sanitizeInput(originalKeyword);
+        String keyword = Validation.sanitizeInput(originalKeyword);
         String type = cbbType.getValue();
 
-        if (ValidationUtils.isEmpty(keyword)) {
+        if (Validation.isEmpty(keyword)) {
             resultPane.setText("No results found. Try a different search term.");
             return;
         }
@@ -115,7 +119,7 @@ public class SearchEnginePage extends BorderPane {
             resultPane.setText("Keyword is too long.");
             return;
         }
-        if (!ValidationUtils.isValidLocationName(keyword)) {
+        if (!Validation.isValidLocationName(keyword)) {
             resultPane.setText("Keyword contains illegal characters.");
             return;
         }
@@ -132,14 +136,15 @@ public class SearchEnginePage extends BorderPane {
         resultPane.search(request, loadingMessage);
     }
 
+    // 3. HIỂN THỊ KẾT QUẢ TÌM KIẾM DẠNG TEXT LÊN RESULTPANE (DÙNG CHO CÁC TRƯỜNG HỢP ĐẶC BIỆT)
     public void setResult(String result) {
         resultPane.setText(result);
     }
 
-    public void clearResult() {
-        resultPane.clear();
-    }
+    // 4. XÓA TOÀN BỘ KẾT QUẢ HIỂN THỊ TRÊN RESULTPANE
+    public void clearResult() {resultPane.clear();}
 
+    // 5. TẠO VÀ TRẢ VỀ MỘT INSTANCE MỚI CỦA SEARCHRESULTPANE
     public SearchResultPane createResultPane() {
         return new SearchResultPane(clientService);
     }
